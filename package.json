@@ -35,8 +35,8 @@
     "start": "craco start",
     "netlify": "npx netlify dev --functions ./functions",
     "build": "craco build",
-    "test": "npx jest",
-    "test:watch": "npx jest --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
     "eject": "react-scripts eject",
     "eslint:fix": "eslint --fix src functions"
   },
