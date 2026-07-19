@@ -27,8 +27,9 @@ export async function getGoals(
     user: string,
     token: string,
 ): Promise<Goal[]> {
-  const url = `https://www.beeminder.com/api/v1/users/${user}/goals.json?access_token=${token}&filter=frontburner`;
-  const response = await fetch(url);
+  // Keep the token out of `url` so it never lands in the thrown/logged message.
+  const url = `https://www.beeminder.com/api/v1/users/${user}/goals.json?filter=frontburner`;
+  const response = await fetch(`${url}&access_token=${token}`);
 
   if (!response.ok) {
     throw new Error(
@@ -51,8 +52,9 @@ export async function getGoal(
     slug: string,
     diffSince: number,
 ): Promise<GoalVerbose> {
-  const url = `https://www.beeminder.com/api/v1/users/${user}/goals/${slug}.json?access_token=${token}&diff_since=${diffSince}&datapoints=true`;
-  const response = await fetch(url);
+  // Keep the token out of `url` so it never lands in the thrown/logged message.
+  const url = `https://www.beeminder.com/api/v1/users/${user}/goals/${slug}.json?diff_since=${diffSince}&datapoints=true`;
+  const response = await fetch(`${url}&access_token=${token}`);
 
   if (!response.ok) {
     throw new Error(
