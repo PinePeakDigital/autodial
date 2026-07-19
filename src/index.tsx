@@ -1,9 +1,18 @@
 import React from "react";
 import ReactDOM from "react-dom";
+import * as Sentry from "@sentry/react";
 import "./index.css";
 import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 import {QueryClient, QueryClientProvider} from "react-query";
+
+// No-op unless a DSN is configured (REACT_APP_SENTRY_DSN build var).
+if (process.env.REACT_APP_SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.REACT_APP_SENTRY_DSN,
+    tracesSampleRate: 0,
+  });
+}
 
 const queryClient = new QueryClient();
 

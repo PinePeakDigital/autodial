@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/cloudflare";
 import {getUsers} from "./database";
 import log from "../../src/lib/log";
 import {
@@ -57,10 +58,12 @@ const doCron = async (kv: KVNamespace, dryRun = false): Promise<void> => {
             );
           }
         } catch (e) {
+          Sentry.captureException(e, {extra: {beeminder_user, slug: g.slug}});
           log({m: "failed to dial goal", g, e});
         }
       }));
     } catch (e) {
+      Sentry.captureException(e, {extra: {beeminder_user}});
       log({m: "failed to handle user", beeminder_user, e});
     }
   }));
