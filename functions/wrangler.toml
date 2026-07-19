@@ -16,9 +16,10 @@ not_found_handling = "single-page-application"
 cpu_ms = 300000
 
 # Cron trigger replaces the old public HTTP cron endpoint + Cloud Scheduler.
-# Adjust cadence as desired; the UI promises "once a day at minimum".
+# Must stay DAILY (once): dialing is not frequency-independent, so extra runs
+# over-shift low-history goals. See #57 before increasing the frequency.
 [triggers]
-crons = ["0 * * * *"]
+crons = ["0 0 * * *"]
 
 [[kv_namespaces]]
 binding = "USERS"
