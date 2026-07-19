@@ -1,0 +1,3 @@
+# Copy to .dev.vars for `wrangler dev`. Keeps local runs from writing real
+# goals back to Beeminder (the old Firebase emulator did this automatically).
+DRY_RUN=true

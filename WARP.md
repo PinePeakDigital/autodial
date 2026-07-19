@@ -9,6 +9,7 @@ Autodial is a Beeminder autodialer application that automatically adjusts goal r
 ## Architecture
 
 ### High-Level Structure
+
 - **Frontend**: React TypeScript app built with Create React App + CRACO, using Material-UI components
 - **Backend**: A Cloudflare Worker (`functions/`) — a `fetch()` handler for the user API and a `scheduled()` cron handler that dials goals
 - **Database**: Cloudflare Workers KV (`USERS` namespace) — key = Beeminder username, token stored in KV metadata
@@ -16,6 +17,7 @@ Autodial is a Beeminder autodialer application that automatically adjusts goal r
 - **External API**: Integrates with Beeminder REST API for goal management
 
 ### Key Data Flow
+
 1. Users authenticate via Beeminder OAuth in React app
 2. Frontend POSTs to the Worker's `/update` and `/remove` routes to store/remove their token in KV
 3. The `scheduled()` cron handler fetches goal data from Beeminder for every stored user
@@ -25,6 +27,7 @@ Autodial is a Beeminder autodialer application that automatically adjusts goal r
 ## Common Commands
 
 ### Setup and Installation
+
 ```bash
 # Install frontend dependencies
 npm install
@@ -34,6 +37,7 @@ cd functions && npm install && cd ..
 ```
 
 ### Development
+
 ```bash
 # Start the frontend dev server (http://localhost:3000)
 npm start
@@ -52,6 +56,7 @@ npm run eslint:fix
 ```
 
 ### Worker (Cloudflare)
+
 ```bash
 cd functions/
 
@@ -75,6 +80,7 @@ npx wrangler kv namespace create USERS
 ## Configuration
 
 ### Environment Setup
+
 1. Copy `.env.example` to `.env` and set:
    - `REACT_APP_BM_CLIENT_ID`: Beeminder test client ID
    - `REACT_APP_APP_URL`: Local frontend URL (OAuth redirect), e.g. `http://localhost:3000`
@@ -86,12 +92,14 @@ npx wrangler kv namespace create USERS
    - Copy client ID to `.env` file
 
 ### Cloudflare Configuration
+
 - `functions/wrangler.toml` defines the Worker entry, the `USERS` KV binding, and the cron trigger cadence
 - Deploy secrets (GitHub Actions): `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, and the `REACT_APP_*` build vars
 
 ## Code Organization
 
 ### Frontend Structure (`src/`)
+
 - **Components**: Organized as molecule/organism pattern
   - `component/molecule/`: Small reusable components (e.g., goalRow)
   - `component/organism/`: Larger feature components (stepOne, stepTwo, etc.)
@@ -104,6 +112,7 @@ npx wrangler kv namespace create USERS
   - Custom hooks: `useGoals.ts`, `useIsAuthenticated.ts`, etc.
 
 ### Backend Structure (`functions/src/`)
+
 - **Entry Point**: `index.ts` — the Worker's default export (`fetch` + `scheduled`)
 - **Core Functions**:
   - `doCron.ts`: Cron logic to autodial all enabled goals for all users
@@ -112,6 +121,7 @@ npx wrangler kv namespace create USERS
 - **Database**: `database.ts` handles KV operations
 
 ### Key Concepts
+
 - **Autodialer Algorithm**: Calculates new rates based on rolling average performance with maturity weighting
 - **Goal Settings**: Parsed from hashtags in goal titles/fineprint:
   - `#autodial`: Enable autodialing
@@ -123,17 +133,20 @@ npx wrangler kv namespace create USERS
 ## Testing
 
 ### Frontend Tests
+
 - Jest configuration with projects setup for web and functions
 - Tests exclude functions directory
 - Setup file: `src/setupTests.ts`
 - File mocks for assets in `src/__mocks__/`
 
 ### Worker Tests
+
 - Separate Jest config in `functions/package.json`
 - `database` is mocked in the handler specs, so tests don't touch KV
 - Test helpers in `functions/src/test/helpers.ts`
 
 ### Running Tests
+
 ```bash
 # All tests from root
 npm test
@@ -148,6 +161,7 @@ npm run test:watch
 ## Key Dependencies
 
 ### Frontend
+
 - **React 17** with TypeScript
 - **Material-UI v5** for components and theming
 - **React Query v3** for data fetching and caching
@@ -155,12 +169,14 @@ npm run test:watch
 - **CRACO** for Create React App configuration
 
 ### Backend
+
 - **Cloudflare Workers** (`wrangler`, `@cloudflare/workers-types`)
 - **TypeScript** with strict configuration
 - Native `fetch` for external API calls
 - **Lodash** for utility functions
 
 ### Development Tools
+
 - **ESLint** with Google config and Prettier integration
 - **TypeScript** with strict mode enabled
 - **Jest** for testing with `jest-extended`

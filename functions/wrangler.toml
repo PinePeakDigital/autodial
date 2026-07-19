@@ -2,6 +2,12 @@ name = "autodial"
 main = "src/index.ts"
 compatibility_date = "2026-07-19"
 
+# The cron dials every user's goals; it's I/O-bound (awaiting Beeminder), so CPU
+# time stays low, but raise the ceiling so a large user count can't be cut off.
+# (Replaces the old Cloud Function's timeoutSeconds: 540.)
+[limits]
+cpu_ms = 300000
+
 # Cron trigger replaces the old public HTTP cron endpoint + Cloud Scheduler.
 # Adjust cadence as desired; the UI promises "once a day at minimum".
 [triggers]

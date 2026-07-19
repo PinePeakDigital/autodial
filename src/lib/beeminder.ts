@@ -1,7 +1,7 @@
 import {GoalVerbose, Goal, Roadall} from "./index";
 
-// Beeminder returns either the resource or an { errors } object. response.json()
-// is unknown under workers-types, so cast at the boundary.
+// Beeminder returns either the resource or an { errors } object.
+// response.json() is unknown under workers-types, so cast at the boundary.
 type WithErrors = { errors?: { message: string } };
 
 export async function getGoalsVerbose(

@@ -43,6 +43,22 @@ npx wrangler kv namespace create USERS   # paste the id into wrangler.toml
 npx wrangler deploy                       # deploy the Worker
 ```
 
+### Migrating existing users (Firestore → KV)
+
+The cron only dials users present in KV, so before cutover copy the existing
+Firestore `users` collection across. Export each `{beeminder_user,
+beeminder_token}` doc, then bulk-load them with the token in KV metadata (the
+shape `getUsers` reads):
+
+```bash
+# users.json: [{ "key": "<beeminder_user>", "value": "",
+#               "metadata": { "token": "<beeminder_token>" } }, ...]
+npx wrangler kv bulk put --binding USERS users.json
+```
+
+Run this before decommissioning the old Firebase cron, or existing users stop
+being dialed until they re-authorize.
+
 ## Deployment
 
 Pushes to `master` deploy via GitHub Actions (`.github/workflows/deploy.yaml`):

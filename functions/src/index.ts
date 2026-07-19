@@ -16,7 +16,8 @@ const CORS = {
 };
 
 export default {
-  // Cron trigger — replaces the old public HTTP cron endpoint + Cloud Scheduler.
+  // Cron trigger — replaces the old public HTTP cron endpoint
+  // + Cloud Scheduler.
   async scheduled(_event: ScheduledController, env: Env): Promise<void> {
     await doCron(env.USERS, env.DRY_RUN === "true");
   },
