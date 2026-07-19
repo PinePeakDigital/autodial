@@ -2,6 +2,7 @@ import * as Sentry from "@sentry/cloudflare";
 import doCron from "./doCron";
 import doUpdate from "./doUpdate";
 import doRemove from "./doRemove";
+import {redactToken} from "../../src/lib/redactToken";
 
 export interface Env {
   USERS: KVNamespace;
@@ -62,10 +63,28 @@ export default Sentry.withSentry(
       dsn: env.SENTRY_DSN,
       // Errors only; no performance tracing.
       tracesSampleRate: 0,
+      sendDefaultPii: false,
+      // The Beeminder token rides in outgoing fetch URLs; keep it out of the
+      // breadcrumb trail and the captured event.
+      beforeBreadcrumb(breadcrumb) {
+        if (breadcrumb.data?.url) {
+          breadcrumb.data.url = redactToken(breadcrumb.data.url);
+        }
+        return breadcrumb;
+      },
+      beforeSend(event) {
+        if (event.request?.url) {
+          event.request.url = redactToken(event.request.url);
+        }
+        event.breadcrumbs?.forEach((b) => {
+          if (b.data?.url) b.data.url = redactToken(b.data.url);
+        });
+        return event;
+      },
     }),
     // @sentry/cloudflare's declared handler Request type diverges from our
     // workers-types Request; the shape is correct at runtime (handlers is
-    // fully typed above).
-    // @ts-expect-error - upstream workers-types Request skew
-    handlers
+    // fully typed above). Cast to withSentry's own param type (avoids the
+    // ban-ts-comment rule that forbids @ts-expect-error here).
+    handlers as unknown as Parameters<typeof Sentry.withSentry>[1]
 );

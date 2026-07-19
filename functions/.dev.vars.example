@@ -1,3 +1,7 @@
 # Copy to .dev.vars for `wrangler dev`. Keeps local runs from writing real
 # goals back to Beeminder (the old Firebase emulator did this automatically).
 DRY_RUN=true
+
+# Optional: Sentry DSN for the Worker (unset disables Sentry). In production set
+# it once with: wrangler secret put SENTRY_DSN
+SENTRY_DSN=
