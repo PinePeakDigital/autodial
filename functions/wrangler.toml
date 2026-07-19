@@ -20,8 +20,6 @@ cpu_ms = 300000
 [triggers]
 crons = ["0 * * * *"]
 
-# Create with: wrangler kv namespace create USERS
-# then paste the returned id below.
 [[kv_namespaces]]
 binding = "USERS"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "1a85ad333e974bf283c2283d5f92b5da"
