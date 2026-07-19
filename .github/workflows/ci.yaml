@@ -1,13 +1,17 @@
 name: CI Jobs
 on: [push, pull_request]
+permissions:
+  contents: read
 jobs:
   test-app:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
         with:
-          node-version: 16.15.1
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
       - uses: actions/cache@v4
         with:
           path: ~/.npm
@@ -21,10 +25,12 @@ jobs:
   test-function:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
         with:
-          node-version: 16.15.1
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
       - uses: actions/cache@v4
         with:
           path: ~/.npm

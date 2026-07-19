@@ -1,7 +1,6 @@
 import React from "react";
 import "./App.css";
 
-import {init} from "./lib/firebase";
 import {
   Alert,
   Container,
@@ -11,8 +10,6 @@ import Issues from "./component/organism/issues";
 import StepThree from "./component/organism/stepThree";
 import StepTwo from "./component/organism/stepTwo";
 import StepOne from "./component/organism/stepOne";
-
-init();
 
 function App(): JSX.Element {
   return <Container className={"App"}>

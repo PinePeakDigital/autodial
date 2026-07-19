@@ -1,0 +1,25 @@
+name = "autodial"
+main = "src/index.ts"
+compatibility_date = "2026-07-19"
+
+# Serve the built SPA as static assets from this same Worker (no Cloudflare
+# Pages). Non-asset, non-GET requests (the /update, /remove POSTs) fall through
+# to the fetch handler; unmatched GETs serve index.html for client routing.
+[assets]
+directory = "../build"
+not_found_handling = "single-page-application"
+
+# The cron dials every user's goals; it's I/O-bound (awaiting Beeminder), so CPU
+# time stays low, but raise the ceiling so a large user count can't be cut off.
+# (Replaces the old Cloud Function's timeoutSeconds: 540.)
+[limits]
+cpu_ms = 300000
+
+# Cron trigger replaces the old public HTTP cron endpoint + Cloud Scheduler.
+# Adjust cadence as desired; the UI promises "once a day at minimum".
+[triggers]
+crons = ["0 * * * *"]
+
+[[kv_namespaces]]
+binding = "USERS"
+id = "1a85ad333e974bf283c2283d5f92b5da"

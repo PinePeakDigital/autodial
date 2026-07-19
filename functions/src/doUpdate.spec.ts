@@ -7,9 +7,11 @@ jest.mock("./database");
 
 const mockGetUser = getUser as jest.Mock;
 
+const kv = {} as KVNamespace;
+
 describe("doUpdate", () => {
   it("runs", async () => {
-    await doUpdate("the_user", "the_token");
+    await doUpdate(kv, "the_user", "the_token");
 
     expect(getUser).toBeCalledWith("the_user", "the_token");
   });
@@ -21,6 +23,7 @@ describe("doUpdate", () => {
 
     await expect(async () => {
       await doUpdate(
+          kv,
           "the_user",
           "the_token"
       );
@@ -28,8 +31,8 @@ describe("doUpdate", () => {
   });
 
   it("updates user", async () => {
-    await doUpdate("the_user", "the_token");
+    await doUpdate(kv, "the_user", "the_token");
 
-    expect(updateUser).toBeCalledWith("the_user", "the_token");
+    expect(updateUser).toBeCalledWith(kv, "the_user", "the_token");
   });
 });

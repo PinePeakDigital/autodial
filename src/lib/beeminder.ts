@@ -1,6 +1,8 @@
-import fetch from "node-fetch";
-import axios from "axios";
 import {GoalVerbose, Goal, Roadall} from "./index";
+
+// Beeminder returns either the resource or an { errors } object.
+// response.json() is unknown under workers-types, so cast at the boundary.
+type WithErrors = { errors?: { message: string } };
 
 export async function getGoalsVerbose(
     user: string,
@@ -25,9 +27,17 @@ export async function getGoals(
     user: string,
     token: string,
 ): Promise<Goal[]> {
-  const url = `https://www.beeminder.com/api/v1/users/${user}/goals.json?access_token=${token}&filter=frontburner`;
-  const response = await fetch(url);
-  const data = await response.json();
+  // Keep the token out of `url` so it never lands in the thrown/logged message.
+  const url = `https://www.beeminder.com/api/v1/users/${user}/goals.json?filter=frontburner`;
+  const response = await fetch(`${url}&access_token=${token}`);
+
+  if (!response.ok) {
+    throw new Error(
+        `Fetch error: ${response.status} - ${response.statusText} - ${url}`
+    );
+  }
+
+  const data = await response.json() as Goal[] & WithErrors;
 
   if (data?.errors) {
     throw new Error(data.errors.message);
@@ -42,9 +52,17 @@ export async function getGoal(
     slug: string,
     diffSince: number,
 ): Promise<GoalVerbose> {
-  const url = `https://www.beeminder.com/api/v1/users/${user}/goals/${slug}.json?access_token=${token}&diff_since=${diffSince}&datapoints=true`;
-  const response = await fetch(url);
-  const data = await response.json();
+  // Keep the token out of `url` so it never lands in the thrown/logged message.
+  const url = `https://www.beeminder.com/api/v1/users/${user}/goals/${slug}.json?diff_since=${diffSince}&datapoints=true`;
+  const response = await fetch(`${url}&access_token=${token}`);
+
+  if (!response.ok) {
+    throw new Error(
+        `Fetch error: ${response.status} - ${response.statusText} - ${url}`
+    );
+  }
+
+  const data = await response.json() as GoalVerbose & WithErrors;
 
   if (data?.errors) {
     throw new Error(data.errors.message);
@@ -55,19 +73,21 @@ export async function getGoal(
 
 export async function getUser(user: string, token: string): Promise<unknown> {
   const url = `https://www.beeminder.com/api/v1/users/${user}.json`;
-  const response = await axios.get(`${url}?access_token=${token}`);
+  const response = await fetch(`${url}?access_token=${token}`);
 
-  if (response.status !== 200) {
+  if (!response.ok) {
     const msg =
       `Fetch error: ${response.status} - ${response.statusText} - ${url}`;
     throw new Error(msg);
   }
 
-  if (response.data?.errors) {
-    throw new Error(response.data.errors.message);
+  const data = await response.json() as WithErrors;
+
+  if (data?.errors) {
+    throw new Error(data.errors.message);
   }
 
-  return response.data;
+  return data;
 }
 
 export async function updateGoal(
@@ -81,17 +101,23 @@ export async function updateGoal(
     ...fields,
     roadall: JSON.stringify(fields.roadall),
   };
-  const response = await axios.put(`${url}?access_token=${token}`, putData);
+  const response = await fetch(`${url}?access_token=${token}`, {
+    method: "PUT",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(putData),
+  });
 
-  if (response.status !== 200) {
+  if (!response.ok) {
     const msg =
       `Fetch error: ${response.status} - ${response.statusText} - ${url}`;
     throw new Error(msg);
   }
 
-  if (response.data?.errors) {
-    throw new Error(response.data.errors.message);
+  const data = await response.json() as Omit<Goal, "datapoints"> & WithErrors;
+
+  if (data?.errors) {
+    throw new Error(data.errors.message);
   }
 
-  return response.data;
+  return data;
 }

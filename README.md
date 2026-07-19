@@ -1,33 +1,30 @@
 # autodial
 
+Beeminder autodialer. A single Cloudflare Worker serves the React SPA (as
+static assets), the user API, and the dialing cron, backed by Workers KV.
+
 ## Local Development
 
 - Copy `.env.example` to `.env` and set variables
-- `npx netlify link`
-- `npm run netlify`
-- Open <http://localhost:8888/>
+- `npm start` — runs the frontend at <http://localhost:3000/>
+- `cd functions && npm run dev` — runs the Worker at <http://localhost:8787/>
 
 ### Creating your Beeminder test client
 
 - Go to your [account settings](https://www.beeminder.com/settings/account)
 - At the bottom of the page, click "Register a new app"
 - Name it something like `bm_autodial_dev`
-- Use `http://localhost:8888` as the redirect and post-deauthorize callback urls
-- Copy the client ID into your `.env.local` file
+- Use `http://localhost:3000` as the redirect and post-deauthorize callback urls
+- Copy the client ID into your `.env` file
 
-### Cloud Functions
+## Worker (functions/)
 
-Install the global `firebase` CLI:
-
-```bash
-npm install -g firebase-tools
-```
-
-Login with `taskratchet@gmail.com`:
-
-```bash
-firebase login
-```
+The Worker serves the built SPA from `../build` as static assets, exposes
+`POST /update` and `POST /remove` (called by the frontend), and runs a
+`scheduled()` cron handler that dials every stored user's goals. In production
+the SPA and API share an origin, so the frontend calls `/update` relatively
+(no CORS); local dev is cross-origin (`:3000` → `:8787`), which the Worker's
+CORS headers cover.
 
 Run tests:
 
@@ -36,19 +33,40 @@ cd functions/
 npm run test
 ```
 
-Serve the function locally:
+Run locally (set `DRY_RUN=true` in `.dev.vars` to avoid writing to Beeminder):
 
 ```bash
-firebase serve --only functions
+npm run dev
 ```
 
-## Todos
+### First-time Cloudflare setup
 
-- Set up automatic functions deploy via gh actions on master branch
-- Set up cron trigger on gcp function via gcp scheduler
-- Require CI test passes for merge to master
-- Consider using a tool for monorepo management, such as [TurboRepo][1], [Lerna][2], or [TSDX][3]
+```bash
+npm run build                            # build the SPA into ./build first
+cd functions/
+npx wrangler kv namespace create USERS   # paste the id into wrangler.toml
+npx wrangler deploy                       # deploys the Worker + SPA assets + cron
+```
 
-[1]: https://turborepo.org/
-[2]: https://lerna.js.org/
-[3]: https://github.com/jaredpalmer/tsdx
+### Migrating existing users (Firestore → KV)
+
+The cron only dials users present in KV, so before cutover copy the existing
+Firestore `users` collection across (each user's token goes in KV metadata, the
+shape `getUsers` reads):
+
+```bash
+functions/scripts/migrate-firestore-to-kv.sh
+```
+
+Needs gcloud read access to the old Firestore and an authed wrangler. Run it at
+cutover — it's a point-in-time snapshot; anyone who authorizes on the old system
+afterward is missed until you re-run it.
+
+## Deployment
+
+Pushes to `master` deploy via GitHub Actions (`.github/workflows/deploy.yaml`):
+one job builds the SPA and runs `wrangler deploy`, which uploads the Worker,
+the static assets, and the cron trigger together. Requires `CLOUDFLARE_API_TOKEN`
+and `CLOUDFLARE_ACCOUNT_ID` repo secrets, plus the `REACT_APP_APP_URL` and
+`REACT_APP_BM_CLIENT_ID` build secrets (`REACT_APP_API_URL` is left empty in
+prod — same origin). The cron cadence is set in `functions/wrangler.toml`.

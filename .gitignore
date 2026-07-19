@@ -1,6 +1,8 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-firebase-debug.log
+# Cloudflare Workers
+.wrangler/
+.dev.vars
 
 # dependencies
 /node_modules
@@ -26,3 +28,6 @@ yarn-error.log*
 
 # Local Netlify folder
 .netlify
+
+# One-time migration export (contains live tokens)
+functions/scripts/users-kv.json

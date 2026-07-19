@@ -21,13 +21,10 @@ import {
 } from "./lib";
 import { GoalInput, makeGoal } from "../functions/src/test/helpers";
 import { remove, update } from "./lib/functions";
-import userEvent from "@testing-library/user-event";
 
 jest.mock("./lib/browser");
 jest.mock("./lib/functions");
-jest.mock("./lib/firebase");
 jest.mock("./lib/beeminder");
-jest.mock("./lib/force");
 
 const mockGetParams = getParams as jest.Mock;
 const mockUpdate = update as jest.Mock;
@@ -511,18 +508,6 @@ describe("Home page", () => {
       await waitFor(() => {
         expect(screen.getByText("the_error")).toBeInTheDocument();
       });
-    });
-  });
-
-  it("refetches goals after force run", async () => {
-    loadParams("?access_token=abc123&username=the_user");
-
-    await r(<App />);
-
-    userEvent.click(screen.getByText("Force Run"));
-
-    await waitFor(() => {
-      expect(getGoalsVerbose).toBeCalledTimes(2);
     });
   });
 

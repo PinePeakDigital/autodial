@@ -24,7 +24,9 @@
     "sourceMap": true,
     "strict": true,
     "target": "es2017",
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "types": ["@cloudflare/workers-types", "jest"],
+    "skipLibCheck": true
   },
   "compileOnSave": true,
   "include": [
