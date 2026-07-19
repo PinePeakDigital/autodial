@@ -18,56 +18,62 @@ function makeKv(pages: Page[]) {
 }
 
 describe("database (KV)", () => {
-  it("getUsers reads a single page, token from metadata", async () => {
-    const kv = makeKv([
-      {keys: [{name: "alice", metadata: {token: "a"}}], list_complete: true},
-    ]);
+  describe("getUsers", () => {
+    it("reads a single page, token from metadata", async () => {
+      const kv = makeKv([
+        {keys: [{name: "alice", metadata: {token: "a"}}], list_complete: true},
+      ]);
 
-    await expect(getUsers(kv)).resolves.toEqual([
-      {beeminder_user: "alice", beeminder_token: "a"},
-    ]);
+      await expect(getUsers(kv)).resolves.toEqual([
+        {beeminder_user: "alice", beeminder_token: "a"},
+      ]);
+    });
+
+    it("follows the cursor across pages", async () => {
+      const kv = makeKv([
+        {
+          keys: [{name: "alice", metadata: {token: "a"}}],
+          list_complete: false,
+          cursor: "c1",
+        },
+        {keys: [{name: "bob", metadata: {token: "b"}}], list_complete: true},
+      ]);
+
+      const users = await getUsers(kv);
+
+      expect(users).toEqual([
+        {beeminder_user: "alice", beeminder_token: "a"},
+        {beeminder_user: "bob", beeminder_token: "b"},
+      ]);
+      expect((kv.list as jest.Mock)).toHaveBeenCalledTimes(2);
+    });
+
+    it("defaults a missing token to empty string", async () => {
+      const kv = makeKv([{keys: [{name: "alice"}], list_complete: true}]);
+
+      await expect(getUsers(kv)).resolves.toEqual([
+        {beeminder_user: "alice", beeminder_token: ""},
+      ]);
+    });
   });
 
-  it("getUsers follows the cursor across pages", async () => {
-    const kv = makeKv([
-      {
-        keys: [{name: "alice", metadata: {token: "a"}}],
-        list_complete: false,
-        cursor: "c1",
-      },
-      {keys: [{name: "bob", metadata: {token: "b"}}], list_complete: true},
-    ]);
-
-    const users = await getUsers(kv);
-
-    expect(users).toEqual([
-      {beeminder_user: "alice", beeminder_token: "a"},
-      {beeminder_user: "bob", beeminder_token: "b"},
-    ]);
-    expect((kv.list as jest.Mock)).toHaveBeenCalledTimes(2);
+  describe("updateUser", () => {
+    it("stores the token in metadata", async () => {
+      const kv = makeKv([]);
+      await updateUser(kv, "alice", "tok");
+      expect(kv.put).toHaveBeenCalledWith(
+          "alice",
+          "",
+          {metadata: {token: "tok"}}
+      );
+    });
   });
 
-  it("getUsers defaults a missing token to empty string", async () => {
-    const kv = makeKv([{keys: [{name: "alice"}], list_complete: true}]);
-
-    await expect(getUsers(kv)).resolves.toEqual([
-      {beeminder_user: "alice", beeminder_token: ""},
-    ]);
-  });
-
-  it("updateUser stores the token in metadata", async () => {
-    const kv = makeKv([]);
-    await updateUser(kv, "alice", "tok");
-    expect(kv.put).toHaveBeenCalledWith(
-        "alice",
-        "",
-        {metadata: {token: "tok"}}
-    );
-  });
-
-  it("removeUser deletes the key", async () => {
-    const kv = makeKv([]);
-    await removeUser(kv, "alice");
-    expect(kv.delete).toHaveBeenCalledWith("alice");
+  describe("removeUser", () => {
+    it("deletes the key", async () => {
+      const kv = makeKv([]);
+      await removeUser(kv, "alice");
+      expect(kv.delete).toHaveBeenCalledWith("alice");
+    });
   });
 });
