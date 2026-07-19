@@ -1,8 +1,9 @@
-import worker, {Env} from "./index";
+import {handlers, Env} from "./index";
 import doUpdate from "./doUpdate";
 import doRemove from "./doRemove";
 import doCron from "./doCron";
 
+jest.mock("@sentry/cloudflare");
 jest.mock("./doUpdate");
 jest.mock("./doRemove");
 jest.mock("./doCron");
@@ -37,18 +38,18 @@ function req(method: string, path: string, body?: unknown): Request {
 
 describe("worker fetch", () => {
   it("answers OPTIONS preflight with CORS", async () => {
-    const res = await worker.fetch(req("OPTIONS", "/update"), env);
+    const res = await handlers.fetch(req("OPTIONS", "/update"), env);
     expect(res.status).toBe(204);
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
   });
 
   it("rejects non-POST methods", async () => {
-    const res = await worker.fetch(req("GET", "/update"), env);
+    const res = await handlers.fetch(req("GET", "/update"), env);
     expect(res.status).toBe(405);
   });
 
   it("routes /update to doUpdate", async () => {
-    const res = await worker.fetch(
+    const res = await handlers.fetch(
         req("POST", "/update", {user: "u", token: "t"}),
         env
     );
@@ -57,7 +58,7 @@ describe("worker fetch", () => {
   });
 
   it("routes /remove to doRemove", async () => {
-    const res = await worker.fetch(
+    const res = await handlers.fetch(
         req("POST", "/remove", {user: "u", token: "t"}),
         env
     );
@@ -66,13 +67,13 @@ describe("worker fetch", () => {
   });
 
   it("404s unknown paths", async () => {
-    const res = await worker.fetch(req("POST", "/nope", {}), env);
+    const res = await handlers.fetch(req("POST", "/nope", {}), env);
     expect(res.status).toBe(404);
   });
 
   it("500s when a handler throws", async () => {
     (doUpdate as jest.Mock).mockRejectedValueOnce(new Error("boom"));
-    const res = await worker.fetch(
+    const res = await handlers.fetch(
         req("POST", "/update", {user: "u", token: "t"}),
         env
     );
@@ -82,7 +83,7 @@ describe("worker fetch", () => {
 
 describe("worker scheduled", () => {
   it("dials all users, passing the DRY_RUN flag", async () => {
-    await worker.scheduled(
+    await handlers.scheduled(
         {} as ScheduledController,
         {USERS: {} as KVNamespace, DRY_RUN: "true"}
     );

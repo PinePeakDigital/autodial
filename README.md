@@ -70,3 +70,14 @@ the static assets, and the cron trigger together. Requires `CLOUDFLARE_API_TOKEN
 and `CLOUDFLARE_ACCOUNT_ID` repo secrets, plus the `REACT_APP_APP_URL` and
 `REACT_APP_BM_CLIENT_ID` build secrets (`REACT_APP_API_URL` is left empty in
 prod — same origin). The cron cadence is set in `functions/wrangler.toml`.
+
+## Error tracking (Sentry)
+
+Both halves are optional and no-op until their DSN is set:
+
+- **Frontend** — `REACT_APP_SENTRY_DSN` repo secret (baked into the build).
+- **Worker** — a `SENTRY_DSN` Worker secret, set once with
+  `cd functions && wrangler secret put SENTRY_DSN` (not a build var; the deploy
+  doesn't provision it).
+
+Beeminder tokens are scrubbed from URLs before events are sent (`redactToken`).

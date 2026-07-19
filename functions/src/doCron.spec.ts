@@ -14,6 +14,7 @@ import { setNow } from "../../src/lib/test/helpers";
 import { getUsers } from "./database";
 import { makeGoal } from "./test/helpers";
 
+jest.mock("@sentry/cloudflare");
 jest.mock("../../src/lib/log");
 jest.mock("./database");
 jest.mock("../../src/lib/dial");
