@@ -1,0 +1,14 @@
+name = "autodial"
+main = "src/index.ts"
+compatibility_date = "2026-07-19"
+
+# Cron trigger replaces the old public HTTP cron endpoint + Cloud Scheduler.
+# Adjust cadence as desired; the UI promises "once a day at minimum".
+[triggers]
+crons = ["0 * * * *"]
+
+# Create with: wrangler kv namespace create USERS
+# then paste the returned id below.
+[[kv_namespaces]]
+binding = "USERS"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"

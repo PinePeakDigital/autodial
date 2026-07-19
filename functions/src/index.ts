@@ -1,54 +1,51 @@
-import * as functions from "firebase-functions";
 import doCron from "./doCron";
 import doUpdate from "./doUpdate";
 import doRemove from "./doRemove";
 
-
-// Start writing Firebase Functions
-// https://firebase.google.com/docs/functions/typescript
-
-async function withOptions(
-    func: () => Promise<void>,
-    req: functions.Request,
-    res: functions.Response
-) {
-  res.set("Access-Control-Allow-Origin", "*");
-
-  if (req.method === "OPTIONS") {
-    res.set("Access-Control-Allow-Methods", "*");
-    res.set("Access-Control-Allow-Headers", "Content-Type");
-    res.set("Access-Control-Max-Age", "3600");
-    res.status(204).send("");
-  } else {
-    try {
-      await func();
-      res.status(200).send("Success");
-    } catch {
-      res.status(500).send("Error");
-    }
-  }
+export interface Env {
+  USERS: KVNamespace;
+  // "true" locally to skip writing goals back to Beeminder (wrangler dev)
+  DRY_RUN?: string;
 }
 
-export const cron = functions.runWith({
-  timeoutSeconds: 540,
-}).https.onRequest(async (req: functions.Request, res: functions.Response) => {
-  await withOptions(doCron, req, res);
-});
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Max-Age": "3600",
+};
 
-export const update = functions.https.onCall(async (
-    data
-) => {
-  await doUpdate(
-      data.user,
-      data.token
-  );
-});
+export default {
+  // Cron trigger — replaces the old public HTTP cron endpoint + Cloud Scheduler.
+  async scheduled(_event: ScheduledController, env: Env): Promise<void> {
+    await doCron(env.USERS, env.DRY_RUN === "true");
+  },
 
-export const remove = functions.https.onCall(async (
-    data
-) => {
-  await doRemove(
-      data.user,
-      data.token
-  );
-});
+  async fetch(req: Request, env: Env): Promise<Response> {
+    if (req.method === "OPTIONS") {
+      return new Response(null, {status: 204, headers: CORS});
+    }
+
+    if (req.method !== "POST") {
+      return new Response("Method not allowed", {status: 405, headers: CORS});
+    }
+
+    const {pathname} = new URL(req.url);
+
+    try {
+      const {user, token} = await req.json<{ user: string; token: string }>();
+
+      if (pathname === "/update") {
+        await doUpdate(env.USERS, user, token);
+      } else if (pathname === "/remove") {
+        await doRemove(env.USERS, user, token);
+      } else {
+        return new Response("Not found", {status: 404, headers: CORS});
+      }
+
+      return new Response("Success", {status: 200, headers: CORS});
+    } catch {
+      return new Response("Error", {status: 500, headers: CORS});
+    }
+  },
+};

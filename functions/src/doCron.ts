@@ -11,12 +11,10 @@ import {
 
 /* eslint-disable camelcase */
 
-const doCron = async (): Promise<void> => {
-  const isDev = process.env.FUNCTIONS_EMULATOR === "true";
+const doCron = async (kv: KVNamespace, dryRun = false): Promise<void> => {
+  log(dryRun);
 
-  log(isDev);
-
-  const users = await getUsers();
+  const users = await getUsers(kv);
 
   await Promise.all(users.map(async ({beeminder_user, beeminder_token}) => {
     if (!beeminder_user || !beeminder_token) {
@@ -50,7 +48,7 @@ const doCron = async (): Promise<void> => {
 
           if (!roadall) return;
 
-          if (!isDev) {
+          if (!dryRun) {
             await updateGoal(
                 beeminder_user,
                 beeminder_token,

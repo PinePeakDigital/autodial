@@ -14,7 +14,6 @@ import {
 import { getUsers } from "./database";
 import { makeGoal } from "./test/helpers";
 
-jest.mock("firebase-functions");
 jest.mock("../../src/lib/log");
 jest.mock("./database");
 jest.mock("../../src/lib/dial");
@@ -31,7 +30,7 @@ function setGoal(g: Partial<Goal>) {
 }
 
 async function runCron() {
-  await doCron();
+  await doCron({} as KVNamespace);
 }
 
 describe("function", () => {
