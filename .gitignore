@@ -28,3 +28,6 @@ yarn-error.log*
 
 # Local Netlify folder
 .netlify
+
+# One-time migration export (contains live tokens)
+functions/scripts/users-kv.json

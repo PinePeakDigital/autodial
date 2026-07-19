@@ -51,18 +51,16 @@ npx wrangler deploy                       # deploys the Worker + SPA assets + cr
 ### Migrating existing users (Firestore → KV)
 
 The cron only dials users present in KV, so before cutover copy the existing
-Firestore `users` collection across. Export each `{beeminder_user,
-beeminder_token}` doc, then bulk-load them with the token in KV metadata (the
+Firestore `users` collection across (each user's token goes in KV metadata, the
 shape `getUsers` reads):
 
 ```bash
-# users.json: [{ "key": "<beeminder_user>", "value": "",
-#               "metadata": { "token": "<beeminder_token>" } }, ...]
-npx wrangler kv bulk put --binding USERS users.json
+functions/scripts/migrate-firestore-to-kv.sh
 ```
 
-Run this before decommissioning the old Firebase cron, or existing users stop
-being dialed until they re-authorize.
+Needs gcloud read access to the old Firestore and an authed wrangler. Run it at
+cutover — it's a point-in-time snapshot; anyone who authorizes on the old system
+afterward is missed until you re-run it.
 
 ## Deployment
 
