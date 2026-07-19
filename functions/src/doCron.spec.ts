@@ -7,10 +7,10 @@ import {
   Roadall,
   updateGoal,
   getGoal,
-  setNow,
   now,
   SID,
 } from "../../src/lib";
+import { setNow } from "../../src/lib/test/helpers";
 import { getUsers } from "./database";
 import { makeGoal } from "./test/helpers";
 

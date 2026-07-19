@@ -11,14 +11,12 @@ import {
   getGoal,
   getGoals,
   getGoalsVerbose,
-  setNow,
   GoalVerbose,
   parseDate,
-  r,
-  withMutedReactQueryLogger,
   now,
   SID,
 } from "./lib";
+import { setNow, r, withMutedReactQueryLogger } from "./lib/test/helpers";
 import { GoalInput, makeGoal } from "../functions/src/test/helpers";
 import { remove, update } from "./lib/functions";
 
