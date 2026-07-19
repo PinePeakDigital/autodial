@@ -19,8 +19,21 @@ if (process.env.REACT_APP_SENTRY_DSN) {
       if (event.request?.url) {
         event.request.url = redactToken(event.request.url);
       }
+      if (event.request?.data) {
+        event.request.data = "[REDACTED]";
+      }
+      // Navigation breadcrumbs keep URLs in from/to (not url); b.data is `any`,
+      // so guard the type before scrubbing to avoid throwing in beforeSend.
       event.breadcrumbs?.forEach((b) => {
-        if (b.data?.url) b.data.url = redactToken(b.data.url);
+        if (typeof b.data?.url === "string") {
+          b.data.url = redactToken(b.data.url);
+        }
+        if (typeof b.data?.from === "string") {
+          b.data.from = redactToken(b.data.from);
+        }
+        if (typeof b.data?.to === "string") {
+          b.data.to = redactToken(b.data.to);
+        }
       });
       return event;
     },

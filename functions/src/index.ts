@@ -67,7 +67,7 @@ export default Sentry.withSentry(
       // The Beeminder token rides in outgoing fetch URLs; keep it out of the
       // breadcrumb trail and the captured event.
       beforeBreadcrumb(breadcrumb) {
-        if (breadcrumb.data?.url) {
+        if (typeof breadcrumb.data?.url === "string") {
           breadcrumb.data.url = redactToken(breadcrumb.data.url);
         }
         return breadcrumb;
@@ -76,8 +76,14 @@ export default Sentry.withSentry(
         if (event.request?.url) {
           event.request.url = redactToken(event.request.url);
         }
+        // We never want the request body (it carries the token) in an event.
+        if (event.request?.data) {
+          event.request.data = "[REDACTED]";
+        }
         event.breadcrumbs?.forEach((b) => {
-          if (b.data?.url) b.data.url = redactToken(b.data.url);
+          if (typeof b.data?.url === "string") {
+            b.data.url = redactToken(b.data.url);
+          }
         });
         return event;
       },
