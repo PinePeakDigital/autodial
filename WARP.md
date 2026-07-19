@@ -13,7 +13,7 @@ Autodial is a Beeminder autodialer application that automatically adjusts goal r
 - **Frontend**: React TypeScript app built with Create React App + CRACO, using Material-UI components
 - **Backend**: A Cloudflare Worker (`functions/`) — a `fetch()` handler for the user API and a `scheduled()` cron handler that dials goals
 - **Database**: Cloudflare Workers KV (`USERS` namespace) — key = Beeminder username, token stored in KV metadata
-- **Deployment**: Frontend on Cloudflare Pages, Worker via `wrangler deploy`
+- **Deployment**: one Worker via `wrangler deploy` serving the SPA (static assets), the API, and the cron; no separate Pages project
 - **External API**: Integrates with Beeminder REST API for goal management
 
 ### Key Data Flow

@@ -1,7 +1,7 @@
 # autodial
 
-Beeminder autodialer. React frontend (Cloudflare Pages) + a Cloudflare Worker
-(cron + user API) backed by Workers KV.
+Beeminder autodialer. A single Cloudflare Worker serves the React SPA (as
+static assets), the user API, and the dialing cron, backed by Workers KV.
 
 ## Local Development
 
@@ -19,8 +19,12 @@ Beeminder autodialer. React frontend (Cloudflare Pages) + a Cloudflare Worker
 
 ## Worker (functions/)
 
-The Worker exposes `POST /update` and `POST /remove` (called by the frontend)
-and a `scheduled()` cron handler that dials every stored user's goals.
+The Worker serves the built SPA from `../build` as static assets, exposes
+`POST /update` and `POST /remove` (called by the frontend), and runs a
+`scheduled()` cron handler that dials every stored user's goals. In production
+the SPA and API share an origin, so the frontend calls `/update` relatively
+(no CORS); local dev is cross-origin (`:3000` → `:8787`), which the Worker's
+CORS headers cover.
 
 Run tests:
 
@@ -38,9 +42,10 @@ npm run dev
 ### First-time Cloudflare setup
 
 ```bash
+npm run build                            # build the SPA into ./build first
 cd functions/
 npx wrangler kv namespace create USERS   # paste the id into wrangler.toml
-npx wrangler deploy                       # deploy the Worker
+npx wrangler deploy                       # deploys the Worker + SPA assets + cron
 ```
 
 ### Migrating existing users (Firestore → KV)
@@ -62,6 +67,8 @@ being dialed until they re-authorize.
 ## Deployment
 
 Pushes to `master` deploy via GitHub Actions (`.github/workflows/deploy.yaml`):
-the Worker via `wrangler deploy` and the frontend to Cloudflare Pages. Requires
-`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repo secrets, plus the
-`REACT_APP_*` build secrets. The cron cadence is set in `functions/wrangler.toml`.
+one job builds the SPA and runs `wrangler deploy`, which uploads the Worker,
+the static assets, and the cron trigger together. Requires `CLOUDFLARE_API_TOKEN`
+and `CLOUDFLARE_ACCOUNT_ID` repo secrets, plus the `REACT_APP_APP_URL` and
+`REACT_APP_BM_CLIENT_ID` build secrets (`REACT_APP_API_URL` is left empty in
+prod — same origin). The cron cadence is set in `functions/wrangler.toml`.
