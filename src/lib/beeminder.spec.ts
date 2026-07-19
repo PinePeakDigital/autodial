@@ -23,6 +23,11 @@ describe("beeminder client", () => {
       mockFetch({json: async () => ({errors: {message: "bad"}})});
       await expect(getGoals("u", "t")).rejects.toThrow("bad");
     });
+
+    it("throws on a non-2xx response (before parsing)", async () => {
+      mockFetch({ok: false, status: 500, statusText: "Server Error"});
+      await expect(getGoals("u", "t")).rejects.toThrow(/500/);
+    });
   });
 
   // axios threw on non-2xx automatically; fetch does not, so getUser must

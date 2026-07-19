@@ -29,6 +29,13 @@ export async function getGoals(
 ): Promise<Goal[]> {
   const url = `https://www.beeminder.com/api/v1/users/${user}/goals.json?access_token=${token}&filter=frontburner`;
   const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(
+        `Fetch error: ${response.status} - ${response.statusText} - ${url}`
+    );
+  }
+
   const data = await response.json() as Goal[] & WithErrors;
 
   if (data?.errors) {
@@ -46,6 +53,13 @@ export async function getGoal(
 ): Promise<GoalVerbose> {
   const url = `https://www.beeminder.com/api/v1/users/${user}/goals/${slug}.json?access_token=${token}&diff_since=${diffSince}&datapoints=true`;
   const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(
+        `Fetch error: ${response.status} - ${response.statusText} - ${url}`
+    );
+  }
+
   const data = await response.json() as GoalVerbose & WithErrors;
 
   if (data?.errors) {

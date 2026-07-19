@@ -1,4 +1,4 @@
-const API_URL = process.env.REACT_APP_API_URL || "";
+const API_URL = (process.env.REACT_APP_API_URL || "").replace(/\/$/, "");
 
 async function call(path: string, body: unknown): Promise<void> {
   const res = await fetch(`${API_URL}/${path}`, {

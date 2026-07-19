@@ -45,7 +45,8 @@ export default {
       }
 
       return new Response("Success", {status: 200, headers: CORS});
-    } catch {
+    } catch (e) {
+      console.error(e);
       return new Response("Error", {status: 500, headers: CORS});
     }
   },
