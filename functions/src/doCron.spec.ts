@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/cloudflare";
 import doCron from "./doCron";
 import {
   dial,
@@ -9,10 +10,12 @@ import {
   getGoal,
   now,
   SID,
+  SkipDialError,
 } from "../../src/lib";
 import { setNow } from "../../src/lib/test/helpers";
 import { getUsers } from "./database";
 import { makeGoal } from "./test/helpers";
+import log from "../../src/lib/log";
 
 jest.mock("@sentry/cloudflare");
 jest.mock("../../src/lib/log");
@@ -24,6 +27,8 @@ const mockGetGoals = getGoals as jest.Mock;
 const mockGetGoal = getGoal as jest.Mock;
 const mockDial = dial as jest.Mock;
 const mockGetUsers = getUsers as jest.Mock;
+const mockLog = log as jest.Mock;
+const mockCaptureException = Sentry.captureException as jest.Mock;
 
 function setGoal(g: Partial<Goal>) {
   mockGetGoal.mockResolvedValue(g as GoalVerbose);
@@ -216,8 +221,60 @@ describe("function", () => {
 
     expect(dial).toBeCalledWith(goal, expect.objectContaining({ min: 1.5 }));
   });
+
+  it("does not report a skipped goal to Sentry", async () => {
+    const goal = makeGoal({
+      fineprint: "#autodial",
+    });
+
+    setGoal(goal);
+    mockDial.mockImplementation(() => {
+      throw new SkipDialError("Goal ends too soon to dial");
+    });
+
+    await runCron();
+
+    expect(Sentry.captureException).not.toBeCalled();
+  });
+
+  it("logs the reason a goal was skipped", async () => {
+    const goal = makeGoal({
+      fineprint: "#autodial",
+    });
+
+    setGoal(goal);
+    mockDial.mockImplementation(() => {
+      throw new SkipDialError("Goal ends too soon to dial");
+    });
+
+    await runCron();
+
+    expect(mockLog).toBeCalledWith(
+      "skip dial goal the_user/the_slug: Goal ends too soon to dial"
+    );
+  });
+
+  it("still reports a genuine dial failure to Sentry", async () => {
+    const goal = makeGoal({
+      fineprint: "#autodial",
+    });
+    const error = new Error("boom");
+
+    setGoal(goal);
+    mockDial.mockImplementation(() => {
+      throw error;
+    });
+
+    await runCron();
+
+    expect(mockCaptureException).toBeCalledWith(
+      error,
+      expect.objectContaining({
+        extra: { beeminder_user: "the_user", slug: "the_slug" },
+      })
+    );
+  });
 });
 
 // TODO:
-// log dial exceptions
 // log beeminder exceptions

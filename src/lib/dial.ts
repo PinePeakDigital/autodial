@@ -3,6 +3,7 @@ import { AKRASIA_HORIZON, SID, UNIT_SECONDS } from "./constants";
 import { getRollingAverageRate } from "./getRollingAverageRate";
 import { fuzzyEquals } from "./fuzzyEquals";
 import { AutodialSettings, GoalVerbose, Roadall, SparseSegment } from "./index";
+import { SkipDialError } from "./skipDialError";
 
 function clip(x: number, min: number, max: number) {
   if (min > max) [min, max] = [max, min];
@@ -52,18 +53,20 @@ function calculateNewRate(g: GoalVerbose, opts: Partial<AutodialSettings>) {
 }
 
 function shouldDial(g: GoalVerbose) {
-  if (g.odom) throw new Error("Odometer-type goals are not supported");
+  if (g.odom) throw new SkipDialError("Odometer-type goals are not supported");
 
   const roadallEnd = g.roadall[g.roadall.length - 1];
 
   if (roadallEnd[2] === null)
-    throw new Error("Goals without explicit end rates are not supported");
+    throw new SkipDialError(
+      "Goals without explicit end rates are not supported"
+    );
 
   const fullroadEnd = g.fullroad[g.fullroad.length - 1];
 
   // If the goal ends within the akrasia horizon, don't dial it.
   if (fullroadEnd[0] <= now() + AKRASIA_HORIZON)
-    throw new Error("Goal ends too soon to dial");
+    throw new SkipDialError("Goal ends too soon to dial");
 }
 
 function buildRoad(g: GoalVerbose, newRate: number): Roadall {

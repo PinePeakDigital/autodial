@@ -4,6 +4,7 @@ import { e, makeGoal } from "../../functions/src/test/helpers";
 import { parseDate } from "./time";
 import { setNow } from "./test/helpers";
 import { Roadall } from "./types";
+import { SkipDialError } from "./skipDialError";
 
 function getRoadEnd(roadall: Roadall | false) {
   if (!roadall) {
@@ -677,7 +678,8 @@ describe("dial function", () => {
         })
       );
 
-    expect(fn).toThrow();
+    expect(fn).toThrow(SkipDialError);
+    expect(fn).toThrow("Goals without explicit end rates are not supported");
   });
 
   it("does not make strict goal easier", () => {
@@ -770,7 +772,29 @@ describe("dial function", () => {
         })
       );
 
-    expect(fn).toThrow();
+    expect(fn).toThrow(SkipDialError);
+    expect(fn).toThrow("Odometer-type goals are not supported");
+  });
+
+  it("does not dial goal ending within the akrasia horizon", async () => {
+    setNow(2021, 2, 25);
+
+    const fn = () =>
+      dial(
+        makeGoal({
+          aggday: "last",
+          kyoom: false,
+          runits: "d",
+          roadall: [
+            [parseDate("20210125"), 0, null],
+            [parseDate("20210226"), null, 1],
+          ],
+          datapoints: [],
+        })
+      );
+
+    expect(fn).toThrow(SkipDialError);
+    expect(fn).toThrow("Goal ends too soon to dial");
   });
 
   it("uses average of `from` goal", async () => {
@@ -882,7 +906,32 @@ describe("dial function", () => {
 
     const fn = () => dial(g, { times: 2 });
 
+    expect(fn).toThrow(SkipDialError);
+  });
+
+  it("still throws a plain Error for genuine failures", async () => {
+    setNow(2021, 2, 25);
+
+    const fn = () =>
+      dial(
+        // roadall is empty, so reading its last element blows up with a
+        // real bug, not one of the expected skip conditions.
+        makeGoal({
+          aggday: "last",
+          kyoom: false,
+          runits: "d",
+          roadall: [],
+          datapoints: [],
+        })
+      );
+
     expect(fn).toThrow();
+    try {
+      fn();
+      throw new Error("expected fn to throw");
+    } catch (err) {
+      expect(err).not.toBeInstanceOf(SkipDialError);
+    }
   });
 });
 
