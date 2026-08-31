@@ -8,6 +8,7 @@ import {
   dial,
   Goal,
   getSettings, now, SID,
+  SkipDialError,
 } from "../../src/lib";
 
 /* eslint-disable camelcase */
@@ -58,8 +59,12 @@ const doCron = async (kv: KVNamespace, dryRun = false): Promise<void> => {
             );
           }
         } catch (e) {
-          Sentry.captureException(e, {extra: {beeminder_user, slug: g.slug}});
-          log({m: "failed to dial goal", g, e});
+          if (e instanceof SkipDialError) {
+            log(`skip dial goal ${beeminder_user}/${g.slug}: ${e.message}`);
+          } else {
+            Sentry.captureException(e, {extra: {beeminder_user, slug: g.slug}});
+            log({m: "failed to dial goal", g, e});
+          }
         }
       }));
     } catch (e) {
