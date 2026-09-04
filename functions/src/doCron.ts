@@ -1,5 +1,5 @@
 import * as Sentry from "@sentry/cloudflare";
-import {getUsers} from "./database";
+import {getUsers, disableUser} from "./database";
 import log from "../../src/lib/log";
 import {
   getGoal,
@@ -9,6 +9,7 @@ import {
   Goal,
   getSettings, now, SID,
   SkipDialError,
+  BeeminderAuthError,
 } from "../../src/lib";
 
 /* eslint-disable camelcase */
@@ -18,9 +19,16 @@ const doCron = async (kv: KVNamespace, dryRun = false): Promise<void> => {
 
   const users = await getUsers(kv);
 
-  await Promise.all(users.map(async ({beeminder_user, beeminder_token}) => {
+  await Promise.all(users.map(async (
+      {beeminder_user, beeminder_token, disabledAt},
+  ) => {
     if (!beeminder_user || !beeminder_token) {
       log("missing user auth");
+      return;
+    }
+
+    if (disabledAt) {
+      log(`skip disabled user ${beeminder_user}`);
       return;
     }
 
@@ -68,8 +76,16 @@ const doCron = async (kv: KVNamespace, dryRun = false): Promise<void> => {
         }
       }));
     } catch (e) {
-      Sentry.captureException(e, {extra: {beeminder_user}});
-      log({m: "failed to handle user", beeminder_user, e});
+      if (e instanceof BeeminderAuthError) {
+        await disableUser(kv, beeminder_user, beeminder_token, e.message);
+        Sentry.captureException(e, {
+          extra: {beeminder_user, status: e.status},
+        });
+        log({m: "disabled user", beeminder_user, status: e.status});
+      } else {
+        Sentry.captureException(e, {extra: {beeminder_user}});
+        log({m: "failed to handle user", beeminder_user, e});
+      }
     }
   }));
 };

@@ -2,7 +2,15 @@ import {User} from "../../src/lib";
 
 // User tokens live in KV: key = beeminder user, token in metadata so a single
 // list() returns every user + token (no N+1) — see getUsers.
-type TokenMeta = { token: string };
+//
+// disabledAt/disabledReason mark a user whose credential is permanently dead
+// (401/404 from Beeminder). updateUser replaces this metadata wholesale, so
+// re-authorizing (submitting a new token) clears the marker automatically.
+type TokenMeta = {
+  token: string;
+  disabledAt?: number;
+  disabledReason?: string;
+};
 
 export async function getUsers(kv: KVNamespace): Promise<User[]> {
   const users: User[] = [];
@@ -14,6 +22,7 @@ export async function getUsers(kv: KVNamespace): Promise<User[]> {
       users.push({
         beeminder_user: key.name,
         beeminder_token: key.metadata?.token ?? "",
+        disabledAt: key.metadata?.disabledAt,
       });
     }
     cursor = res.list_complete ? undefined : res.cursor;
@@ -35,4 +44,15 @@ export async function removeUser(
     user: string,
 ): Promise<void> {
   await kv.delete(user);
+}
+
+export async function disableUser(
+    kv: KVNamespace,
+    user: string,
+    token: string,
+    reason: string,
+): Promise<void> {
+  await kv.put(user, "", {
+    metadata: {token, disabledAt: Date.now(), disabledReason: reason},
+  });
 }

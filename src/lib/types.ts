@@ -79,4 +79,8 @@ export type User = {
   beeminder_token: string;
   // eslint-disable-next-line camelcase
   beeminder_user: string;
+  // Set when a 401/404 from Beeminder indicates a permanently dead
+  // credential. Cron skips these users without fetching. Re-authorizing
+  // (updateUser) clears this by replacing the KV metadata wholesale.
+  disabledAt?: number;
 };

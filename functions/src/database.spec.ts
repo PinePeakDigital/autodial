@@ -1,9 +1,12 @@
-import {getUsers, updateUser, removeUser} from "./database";
+import {getUsers, updateUser, removeUser, disableUser} from "./database";
 
 /* eslint-disable camelcase */
 
 type Page = {
-  keys: { name: string; metadata?: { token: string } }[];
+  keys: {
+    name: string;
+    metadata?: { token: string; disabledAt?: number };
+  }[];
   list_complete: boolean;
   cursor?: string;
 };
@@ -55,6 +58,19 @@ describe("database (KV)", () => {
         {beeminder_user: "alice", beeminder_token: ""},
       ]);
     });
+
+    it("surfaces disabledAt from metadata", async () => {
+      const kv = makeKv([
+        {
+          keys: [{name: "alice", metadata: {token: "a", disabledAt: 123}}],
+          list_complete: true,
+        },
+      ]);
+
+      await expect(getUsers(kv)).resolves.toEqual([
+        {beeminder_user: "alice", beeminder_token: "a", disabledAt: 123},
+      ]);
+    });
   });
 
   describe("updateUser", () => {
@@ -67,6 +83,21 @@ describe("database (KV)", () => {
           {metadata: {token: "tok"}}
       );
     });
+
+    it("clears a disabledAt marker (metadata replaced wholesale)", async () => {
+      const kv = makeKv([]);
+      await updateUser(kv, "alice", "new_tok");
+      expect(kv.put).toHaveBeenCalledWith(
+          "alice",
+          "",
+          {metadata: {token: "new_tok"}}
+      );
+      // No disabledAt/disabledReason in the written metadata: a prior
+      // disableUser() call is fully overwritten, not merged.
+      const [, , opts] = (kv.put as jest.Mock).mock.calls[0];
+      expect(opts.metadata).not.toHaveProperty("disabledAt");
+      expect(opts.metadata).not.toHaveProperty("disabledReason");
+    });
   });
 
   describe("removeUser", () => {
@@ -74,6 +105,21 @@ describe("database (KV)", () => {
       const kv = makeKv([]);
       await removeUser(kv, "alice");
       expect(kv.delete).toHaveBeenCalledWith("alice");
+    });
+  });
+
+  describe("disableUser", () => {
+    it("writes disabledAt and disabledReason alongside the token", async () => {
+      const kv = makeKv([]);
+      const before = Date.now();
+      await disableUser(kv, "alice", "tok", "401 unauthorized");
+      const [key, value, opts] = (kv.put as jest.Mock).mock.calls[0];
+
+      expect(key).toBe("alice");
+      expect(value).toBe("");
+      expect(opts.metadata.token).toBe("tok");
+      expect(opts.metadata.disabledReason).toBe("401 unauthorized");
+      expect(opts.metadata.disabledAt).toBeGreaterThanOrEqual(before);
     });
   });
 });
