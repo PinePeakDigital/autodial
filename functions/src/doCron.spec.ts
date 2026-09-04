@@ -361,11 +361,38 @@ describe("function", () => {
   });
 
   it("does not disable the user on a non-auth error (e.g. 500)", async () => {
-    mockGetGoals.mockRejectedValue(new Error("Fetch error: 500 - ..."));
+    const error = new Error("Fetch error: 500 - ...");
+    mockGetGoals.mockRejectedValue(error);
 
     await runCron();
 
     expect(mockDisableUser).not.toBeCalled();
+    // The non-auth branch keeps its original payload shape: no status, and
+    // no disabled flag, so a 500 stays visibly distinct from a dead token.
+    expect(mockCaptureException).toBeCalledWith(error, {
+      extra: {beeminder_user: "the_user"},
+    });
+  });
+
+  it("does not disable on a per-goal auth error", async () => {
+    const g = makeGoal({fineprint: "#autodial"});
+    mockGetGoals.mockResolvedValue([g]);
+    mockGetGoal.mockRejectedValue(
+        new BeeminderAuthError(401, "Fetch error: 401 - ...")
+    );
+
+    await runCron();
+
+    // Deliberate asymmetry: a per-goal 401/404 usually means the goal was
+    // renamed or deleted, not that the credential died. Pinned so a future
+    // refactor cannot quietly unify the two catch blocks in either direction.
+    expect(mockDisableUser).not.toBeCalled();
+    expect(mockCaptureException).toBeCalledWith(
+        expect.any(BeeminderAuthError),
+        expect.objectContaining({
+          extra: expect.objectContaining({slug: g.slug}),
+        })
+    );
   });
 
   it("skips a disabled user without fetching goals", async () => {
