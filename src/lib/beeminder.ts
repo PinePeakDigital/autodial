@@ -1,4 +1,5 @@
 import {GoalVerbose, Goal, Roadall} from "./index";
+import {BeeminderAuthError} from "./beeminderAuthError";
 
 // Beeminder returns either the resource or an { errors } object.
 // response.json() is unknown under workers-types, so cast at the boundary.
@@ -32,9 +33,12 @@ export async function getGoals(
   const response = await fetch(`${url}&access_token=${token}`);
 
   if (!response.ok) {
-    throw new Error(
-        `Fetch error: ${response.status} - ${response.statusText} - ${url}`
-    );
+    const msg =
+      `Fetch error: ${response.status} - ${response.statusText} - ${url}`;
+    if (response.status === 401 || response.status === 404) {
+      throw new BeeminderAuthError(response.status, msg);
+    }
+    throw new Error(msg);
   }
 
   const data = await response.json() as Goal[] & WithErrors;
@@ -57,9 +61,12 @@ export async function getGoal(
   const response = await fetch(`${url}&access_token=${token}`);
 
   if (!response.ok) {
-    throw new Error(
-        `Fetch error: ${response.status} - ${response.statusText} - ${url}`
-    );
+    const msg =
+      `Fetch error: ${response.status} - ${response.statusText} - ${url}`;
+    if (response.status === 401 || response.status === 404) {
+      throw new BeeminderAuthError(response.status, msg);
+    }
+    throw new Error(msg);
   }
 
   const data = await response.json() as GoalVerbose & WithErrors;

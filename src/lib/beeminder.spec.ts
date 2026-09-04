@@ -1,4 +1,5 @@
-import {getGoals, getUser, updateGoal} from "./beeminder";
+import {getGoal, getGoals, getUser, updateGoal} from "./beeminder";
+import {BeeminderAuthError} from "./beeminderAuthError";
 
 function mockFetch(res: Record<string, unknown>) {
   (global as unknown as { fetch: jest.Mock }).fetch = jest
@@ -27,6 +28,50 @@ describe("beeminder client", () => {
     it("throws on a non-2xx response (before parsing)", async () => {
       mockFetch({ok: false, status: 500, statusText: "Server Error"});
       await expect(getGoals("u", "t")).rejects.toThrow(/500/);
+    });
+
+    it("throws a generic Error (not BeeminderAuthError) on 500", async () => {
+      mockFetch({ok: false, status: 500, statusText: "Server Error"});
+      await expect(getGoals("u", "t")).rejects.not.toBeInstanceOf(
+          BeeminderAuthError
+      );
+    });
+
+    it("throws BeeminderAuthError on 401", async () => {
+      mockFetch({ok: false, status: 401, statusText: "Unauthorized"});
+      const err = await getGoals("u", "t").catch((e) => e);
+      expect(err).toBeInstanceOf(BeeminderAuthError);
+      expect(err.status).toBe(401);
+    });
+
+    it("throws BeeminderAuthError on 404", async () => {
+      mockFetch({ok: false, status: 404, statusText: "Not Found"});
+      const err = await getGoals("u", "t").catch((e) => e);
+      expect(err).toBeInstanceOf(BeeminderAuthError);
+      expect(err.status).toBe(404);
+    });
+  });
+
+  describe("getGoal", () => {
+    it("throws BeeminderAuthError on 401", async () => {
+      mockFetch({ok: false, status: 401, statusText: "Unauthorized"});
+      const err = await getGoal("u", "t", "g", 0).catch((e) => e);
+      expect(err).toBeInstanceOf(BeeminderAuthError);
+      expect(err.status).toBe(401);
+    });
+
+    it("throws BeeminderAuthError on 404", async () => {
+      mockFetch({ok: false, status: 404, statusText: "Not Found"});
+      const err = await getGoal("u", "t", "g", 0).catch((e) => e);
+      expect(err).toBeInstanceOf(BeeminderAuthError);
+      expect(err.status).toBe(404);
+    });
+
+    it("throws a generic Error (not BeeminderAuthError) on 500", async () => {
+      mockFetch({ok: false, status: 500, statusText: "Server Error"});
+      const err = await getGoal("u", "t", "g", 0).catch((e) => e);
+      expect(err).not.toBeInstanceOf(BeeminderAuthError);
+      expect(err).toBeInstanceOf(Error);
     });
   });
 

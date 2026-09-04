@@ -11,10 +11,11 @@ import {
   now,
   SID,
   SkipDialError,
+  BeeminderAuthError,
 } from "../../src/lib";
-import { setNow } from "../../src/lib/test/helpers";
-import { getUsers } from "./database";
-import { makeGoal } from "./test/helpers";
+import {setNow} from "../../src/lib/test/helpers";
+import {getUsers, disableUser} from "./database";
+import {makeGoal} from "./test/helpers";
 import log from "../../src/lib/log";
 
 jest.mock("@sentry/cloudflare");
@@ -27,6 +28,7 @@ const mockGetGoals = getGoals as jest.Mock;
 const mockGetGoal = getGoal as jest.Mock;
 const mockDial = dial as jest.Mock;
 const mockGetUsers = getUsers as jest.Mock;
+const mockDisableUser = disableUser as jest.Mock;
 const mockLog = log as jest.Mock;
 const mockCaptureException = Sentry.captureException as jest.Mock;
 
@@ -36,7 +38,9 @@ function setGoal(g: Partial<Goal>) {
 }
 
 async function runCron() {
-  await doCron({} as KVNamespace);
+  const kv = {} as KVNamespace;
+  await doCron(kv);
+  return kv;
 }
 
 describe("function", () => {
@@ -78,7 +82,7 @@ describe("function", () => {
 
     await runCron();
 
-    expect(dial).toBeCalledWith(goal, expect.objectContaining({ min: 1.5 }));
+    expect(dial).toBeCalledWith(goal, expect.objectContaining({min: 1.5}));
   });
 
   it("supports max", async () => {
@@ -90,7 +94,7 @@ describe("function", () => {
 
     await runCron();
 
-    expect(dial).toBeCalledWith(goal, expect.objectContaining({ max: 1.5 }));
+    expect(dial).toBeCalledWith(goal, expect.objectContaining({max: 1.5}));
   });
 
   it("skips goals without hashtag", async () => {
@@ -159,10 +163,10 @@ describe("function", () => {
     await runCron();
 
     expect(getGoal).toBeCalledWith(
-      "the_user",
-      "the_token",
-      "the_slug",
-      diffSince
+        "the_user",
+        "the_token",
+        "the_slug",
+        diffSince
     );
   });
 
@@ -188,8 +192,8 @@ describe("function", () => {
     await runCron();
 
     expect(dial).toBeCalledWith(
-      goal,
-      expect.objectContaining({ strict: true })
+        goal,
+        expect.objectContaining({strict: true})
     );
   });
 
@@ -203,10 +207,10 @@ describe("function", () => {
     await runCron();
 
     expect(getGoal).toBeCalledWith(
-      expect.anything(),
-      expect.anything(),
-      "from_goal",
-      expect.anything()
+        expect.anything(),
+        expect.anything(),
+        "from_goal",
+        expect.anything()
     );
   });
 
@@ -219,7 +223,7 @@ describe("function", () => {
 
     await runCron();
 
-    expect(dial).toBeCalledWith(goal, expect.objectContaining({ min: 1.5 }));
+    expect(dial).toBeCalledWith(goal, expect.objectContaining({min: 1.5}));
   });
 
   it("does not report a skipped goal to Sentry", async () => {
@@ -250,7 +254,7 @@ describe("function", () => {
     await runCron();
 
     expect(mockLog).toBeCalledWith(
-      "skip dial goal the_user/the_slug: Goal ends too soon to dial"
+        "skip dial goal the_user/the_slug: Goal ends too soon to dial"
     );
   });
 
@@ -268,11 +272,142 @@ describe("function", () => {
     await runCron();
 
     expect(mockCaptureException).toBeCalledWith(
-      error,
-      expect.objectContaining({
-        extra: { beeminder_user: "the_user", slug: "the_slug" },
-      })
+        error,
+        expect.objectContaining({
+          extra: {beeminder_user: "the_user", slug: "the_slug"},
+        })
     );
+  });
+
+  it("disables the user on a 401 from getGoals", async () => {
+    const error = new BeeminderAuthError(401, "Fetch error: 401 - ...");
+    mockGetGoals.mockRejectedValue(error);
+
+    const kv = await runCron();
+
+    expect(mockDisableUser).toBeCalledWith(
+        kv,
+        "the_user",
+        "the_token",
+        error.message
+    );
+  });
+
+  it("disables the user on a 404 from getGoals", async () => {
+    const error = new BeeminderAuthError(404, "Fetch error: 404 - ...");
+    mockGetGoals.mockRejectedValue(error);
+
+    const kv = await runCron();
+
+    expect(mockDisableUser).toBeCalledWith(
+        kv,
+        "the_user",
+        "the_token",
+        error.message
+    );
+  });
+
+  it("reports a disabled user to Sentry once, with the status", async () => {
+    const error = new BeeminderAuthError(401, "Fetch error: 401 - ...");
+    mockGetGoals.mockRejectedValue(error);
+    mockDisableUser.mockResolvedValue(true);
+
+    await runCron();
+
+    expect(mockCaptureException).toBeCalledTimes(1);
+    expect(mockCaptureException).toBeCalledWith(
+        error,
+        expect.objectContaining({
+          extra: {beeminder_user: "the_user", status: 401},
+        })
+    );
+  });
+
+  it("reports the auth error even when the write is skipped", async () => {
+    const error = new BeeminderAuthError(401, "Fetch error: 401 - ...");
+    mockGetGoals.mockRejectedValue(error);
+    mockDisableUser.mockResolvedValue(false);
+
+    await runCron();
+
+    expect(mockCaptureException).toBeCalledWith(
+        error,
+        expect.objectContaining({
+          extra: {beeminder_user: "the_user", status: 401},
+        })
+    );
+  });
+
+  it("survives a KV failure while disabling", async () => {
+    const error = new BeeminderAuthError(401, "Fetch error: 401 - ...");
+    const writeError = new Error("KV unavailable");
+    mockGetGoals.mockRejectedValue(error);
+    mockDisableUser.mockRejectedValue(writeError);
+
+    // The whole point: this must resolve rather than rejecting the Promise.all
+    // and taking every other user's run down with it.
+    await expect(runCron()).resolves.toBeDefined();
+
+    expect(mockCaptureException).toBeCalledWith(
+        writeError,
+        expect.objectContaining({extra: {beeminder_user: "the_user"}})
+    );
+    expect(mockCaptureException).toBeCalledWith(
+        error,
+        expect.objectContaining({
+          extra: {beeminder_user: "the_user", status: 401},
+        })
+    );
+  });
+
+  it("does not disable the user on a non-auth error (e.g. 500)", async () => {
+    const error = new Error("Fetch error: 500 - ...");
+    mockGetGoals.mockRejectedValue(error);
+
+    await runCron();
+
+    expect(mockDisableUser).not.toBeCalled();
+    // The non-auth branch keeps its original payload shape: no status, and
+    // no disabled flag, so a 500 stays visibly distinct from a dead token.
+    expect(mockCaptureException).toBeCalledWith(error, {
+      extra: {beeminder_user: "the_user"},
+    });
+  });
+
+  it("does not disable on a per-goal auth error", async () => {
+    const g = makeGoal({fineprint: "#autodial"});
+    mockGetGoals.mockResolvedValue([g]);
+    mockGetGoal.mockRejectedValue(
+        new BeeminderAuthError(401, "Fetch error: 401 - ...")
+    );
+
+    await runCron();
+
+    // Deliberate asymmetry: a per-goal 401/404 usually means the goal was
+    // renamed or deleted, not that the credential died. Pinned so a future
+    // refactor cannot quietly unify the two catch blocks in either direction.
+    expect(mockDisableUser).not.toBeCalled();
+    expect(mockCaptureException).toBeCalledWith(
+        expect.any(BeeminderAuthError),
+        expect.objectContaining({
+          extra: expect.objectContaining({slug: g.slug}),
+        })
+    );
+  });
+
+  it("skips a disabled user without fetching goals", async () => {
+    mockGetUsers.mockResolvedValue([
+      {
+        beeminder_user: "the_user",
+        beeminder_token: "the_token",
+        disabledAt: 1700000000000,
+      },
+    ]);
+
+    await runCron();
+
+    expect(mockGetGoals).not.toBeCalled();
+    expect(mockCaptureException).not.toBeCalled();
   });
 });
 

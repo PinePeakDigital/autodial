@@ -1,5 +1,5 @@
 import * as Sentry from "@sentry/cloudflare";
-import {getUsers} from "./database";
+import {getUsers, disableUser} from "./database";
 import log from "../../src/lib/log";
 import {
   getGoal,
@@ -9,6 +9,7 @@ import {
   Goal,
   getSettings, now, SID,
   SkipDialError,
+  BeeminderAuthError,
 } from "../../src/lib";
 
 /* eslint-disable camelcase */
@@ -18,9 +19,16 @@ const doCron = async (kv: KVNamespace, dryRun = false): Promise<void> => {
 
   const users = await getUsers(kv);
 
-  await Promise.all(users.map(async ({beeminder_user, beeminder_token}) => {
+  await Promise.all(users.map(async (
+      {beeminder_user, beeminder_token, disabledAt},
+  ) => {
     if (!beeminder_user || !beeminder_token) {
       log("missing user auth");
+      return;
+    }
+
+    if (disabledAt) {
+      log(`skip disabled user ${beeminder_user}`);
       return;
     }
 
@@ -59,6 +67,10 @@ const doCron = async (kv: KVNamespace, dryRun = false): Promise<void> => {
             );
           }
         } catch (e) {
+          // Deliberately no BeeminderAuthError branch here: a per-goal 401/404
+          // usually means that goal was renamed or deleted, not that the
+          // credential is dead, so it stays a per-goal error. Only the
+          // account-level getGoals failure below disables a user.
           if (e instanceof SkipDialError) {
             log(`skip dial goal ${beeminder_user}/${g.slug}: ${e.message}`);
           } else {
@@ -68,8 +80,32 @@ const doCron = async (kv: KVNamespace, dryRun = false): Promise<void> => {
         }
       }));
     } catch (e) {
-      Sentry.captureException(e, {extra: {beeminder_user}});
-      log({m: "failed to handle user", beeminder_user, e});
+      if (e instanceof BeeminderAuthError) {
+        // Report the auth failure BEFORE attempting the write, so it is
+        // recorded no matter what the write does. A KV hiccup must also not
+        // reject the surrounding Promise.all and take the whole run down --
+        // 9ce8c8e added the per-user try/catch precisely for that isolation.
+        Sentry.captureException(e, {
+          extra: {beeminder_user, status: e.status},
+        });
+
+        try {
+          const disabled = await disableUser(
+              kv, beeminder_user, beeminder_token, e.message
+          );
+          log({
+            m: disabled ? "disabled user" : "auth error, user record moved on",
+            beeminder_user,
+            status: e.status,
+          });
+        } catch (writeError) {
+          Sentry.captureException(writeError, {extra: {beeminder_user}});
+          log({m: "failed to disable user", beeminder_user, e: writeError});
+        }
+      } else {
+        Sentry.captureException(e, {extra: {beeminder_user}});
+        log({m: "failed to handle user", beeminder_user, e});
+      }
     }
   }));
 };
