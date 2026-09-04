@@ -67,6 +67,10 @@ const doCron = async (kv: KVNamespace, dryRun = false): Promise<void> => {
             );
           }
         } catch (e) {
+          // Deliberately no BeeminderAuthError branch here: a per-goal 401/404
+          // usually means that goal was renamed or deleted, not that the
+          // credential is dead, so it stays a per-goal error. Only the
+          // account-level getGoals failure below disables a user.
           if (e instanceof SkipDialError) {
             log(`skip dial goal ${beeminder_user}/${g.slug}: ${e.message}`);
           } else {
@@ -77,11 +81,26 @@ const doCron = async (kv: KVNamespace, dryRun = false): Promise<void> => {
       }));
     } catch (e) {
       if (e instanceof BeeminderAuthError) {
-        await disableUser(kv, beeminder_user, beeminder_token, e.message);
+        // The auth failure is worth reporting whether or not the disable
+        // write lands, and a KV hiccup here must not reject the surrounding
+        // Promise.all and take the whole run down with it.
+        let disabled = false;
+        try {
+          disabled = await disableUser(
+              kv, beeminder_user, beeminder_token, e.message
+          );
+        } catch (writeError) {
+          Sentry.captureException(writeError, {extra: {beeminder_user}});
+          log({m: "failed to disable user", beeminder_user, e: writeError});
+        }
         Sentry.captureException(e, {
-          extra: {beeminder_user, status: e.status},
+          extra: {beeminder_user, status: e.status, disabled},
         });
-        log({m: "disabled user", beeminder_user, status: e.status});
+        log({
+          m: disabled ? "disabled user" : "auth error, user record moved on",
+          beeminder_user,
+          status: e.status,
+        });
       } else {
         Sentry.captureException(e, {extra: {beeminder_user}});
         log({m: "failed to handle user", beeminder_user, e});

@@ -310,6 +310,7 @@ describe("function", () => {
   it("reports a disabled user to Sentry once, with the status", async () => {
     const error = new BeeminderAuthError(401, "Fetch error: 401 - ...");
     mockGetGoals.mockRejectedValue(error);
+    mockDisableUser.mockResolvedValue(true);
 
     await runCron();
 
@@ -317,7 +318,44 @@ describe("function", () => {
     expect(mockCaptureException).toBeCalledWith(
         error,
         expect.objectContaining({
-          extra: {beeminder_user: "the_user", status: 401},
+          extra: {beeminder_user: "the_user", status: 401, disabled: true},
+        })
+    );
+  });
+
+  it("records that the disable was skipped when KV had moved on", async () => {
+    const error = new BeeminderAuthError(401, "Fetch error: 401 - ...");
+    mockGetGoals.mockRejectedValue(error);
+    mockDisableUser.mockResolvedValue(false);
+
+    await runCron();
+
+    expect(mockCaptureException).toBeCalledWith(
+        error,
+        expect.objectContaining({
+          extra: {beeminder_user: "the_user", status: 401, disabled: false},
+        })
+    );
+  });
+
+  it("survives a KV failure while disabling", async () => {
+    const error = new BeeminderAuthError(401, "Fetch error: 401 - ...");
+    const writeError = new Error("KV unavailable");
+    mockGetGoals.mockRejectedValue(error);
+    mockDisableUser.mockRejectedValue(writeError);
+
+    // The whole point: this must resolve rather than rejecting the Promise.all
+    // and taking every other user's run down with it.
+    await expect(runCron()).resolves.toBeDefined();
+
+    expect(mockCaptureException).toBeCalledWith(
+        writeError,
+        expect.objectContaining({extra: {beeminder_user: "the_user"}})
+    );
+    expect(mockCaptureException).toBeCalledWith(
+        error,
+        expect.objectContaining({
+          extra: {beeminder_user: "the_user", status: 401, disabled: false},
         })
     );
   });

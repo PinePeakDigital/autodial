@@ -46,13 +46,28 @@ export async function removeUser(
   await kv.delete(user);
 }
 
+// Returns false when the write was skipped because the stored record moved on.
+//
+// The cron passes the token it started the run with, and kv.put replaces
+// metadata wholesale. Re-reading first is what stops two races from silently
+// destroying state: a user who re-authorized mid-run would otherwise have their
+// fresh working token overwritten with the dead one plus a disabled marker --
+// undoing the very fix they just made -- and a user removed mid-run would be
+// resurrected as a disabled record. In both cases the auth failure is stale, so
+// leave the record alone and let the next run judge whatever is there now.
 export async function disableUser(
     kv: KVNamespace,
     user: string,
     token: string,
     reason: string,
-): Promise<void> {
+): Promise<boolean> {
+  const current = await kv.getWithMetadata<TokenMeta>(user);
+
+  if (current.value === null && current.metadata === null) return false;
+  if (current.metadata && current.metadata.token !== token) return false;
+
   await kv.put(user, "", {
     metadata: {token, disabledAt: Date.now(), disabledReason: reason},
   });
+  return true;
 }

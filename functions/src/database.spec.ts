@@ -11,12 +11,24 @@ type Page = {
   cursor?: string;
 };
 
-function makeKv(pages: Page[]) {
+type StoredMeta = {
+  token: string;
+  disabledAt?: number;
+  disabledReason?: string;
+};
+
+// `stored` is what getWithMetadata sees; disableUser re-reads before writing so
+// the races it guards against can be expressed as "KV already moved on".
+function makeKv(pages: Page[], stored: StoredMeta | null = {token: "tok"}) {
   let i = 0;
   return {
     list: jest.fn(async () => pages[i++]),
     put: jest.fn(async () => undefined),
     delete: jest.fn(async () => undefined),
+    getWithMetadata: jest.fn(async () => ({
+      value: stored === null ? null : "",
+      metadata: stored,
+    })),
   } as unknown as KVNamespace;
 }
 
@@ -120,6 +132,33 @@ describe("database (KV)", () => {
       expect(opts.metadata.token).toBe("tok");
       expect(opts.metadata.disabledReason).toBe("401 unauthorized");
       expect(opts.metadata.disabledAt).toBeGreaterThanOrEqual(before);
+    });
+
+    it("skips the write when the token changed under it", async () => {
+      const kv = makeKv([], {token: "fresh-tok"});
+
+      await expect(disableUser(kv, "alice", "dead-tok", "401")).resolves.toBe(
+          false
+      );
+      expect(kv.put).not.toHaveBeenCalled();
+    });
+
+    it("skips the write when the record is gone", async () => {
+      const kv = makeKv([], null);
+
+      await expect(disableUser(kv, "alice", "dead-tok", "401")).resolves.toBe(
+          false
+      );
+      expect(kv.put).not.toHaveBeenCalled();
+    });
+
+    it("writes when the stored token still matches", async () => {
+      const kv = makeKv([], {token: "dead-tok"});
+
+      await expect(disableUser(kv, "alice", "dead-tok", "401")).resolves.toBe(
+          true
+      );
+      expect(kv.put).toHaveBeenCalled();
     });
   });
 });
