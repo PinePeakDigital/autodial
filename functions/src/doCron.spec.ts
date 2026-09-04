@@ -318,12 +318,12 @@ describe("function", () => {
     expect(mockCaptureException).toBeCalledWith(
         error,
         expect.objectContaining({
-          extra: {beeminder_user: "the_user", status: 401, disabled: true},
+          extra: {beeminder_user: "the_user", status: 401},
         })
     );
   });
 
-  it("records that the disable was skipped when KV had moved on", async () => {
+  it("reports the auth error even when the write is skipped", async () => {
     const error = new BeeminderAuthError(401, "Fetch error: 401 - ...");
     mockGetGoals.mockRejectedValue(error);
     mockDisableUser.mockResolvedValue(false);
@@ -333,7 +333,7 @@ describe("function", () => {
     expect(mockCaptureException).toBeCalledWith(
         error,
         expect.objectContaining({
-          extra: {beeminder_user: "the_user", status: 401, disabled: false},
+          extra: {beeminder_user: "the_user", status: 401},
         })
     );
   });
@@ -355,7 +355,7 @@ describe("function", () => {
     expect(mockCaptureException).toBeCalledWith(
         error,
         expect.objectContaining({
-          extra: {beeminder_user: "the_user", status: 401, disabled: false},
+          extra: {beeminder_user: "the_user", status: 401},
         })
     );
   });

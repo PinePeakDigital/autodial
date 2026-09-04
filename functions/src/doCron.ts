@@ -81,26 +81,27 @@ const doCron = async (kv: KVNamespace, dryRun = false): Promise<void> => {
       }));
     } catch (e) {
       if (e instanceof BeeminderAuthError) {
-        // The auth failure is worth reporting whether or not the disable
-        // write lands, and a KV hiccup here must not reject the surrounding
-        // Promise.all and take the whole run down with it.
-        let disabled = false;
+        // Report the auth failure BEFORE attempting the write, so it is
+        // recorded no matter what the write does. A KV hiccup must also not
+        // reject the surrounding Promise.all and take the whole run down --
+        // 9ce8c8e added the per-user try/catch precisely for that isolation.
+        Sentry.captureException(e, {
+          extra: {beeminder_user, status: e.status},
+        });
+
         try {
-          disabled = await disableUser(
+          const disabled = await disableUser(
               kv, beeminder_user, beeminder_token, e.message
           );
+          log({
+            m: disabled ? "disabled user" : "auth error, user record moved on",
+            beeminder_user,
+            status: e.status,
+          });
         } catch (writeError) {
           Sentry.captureException(writeError, {extra: {beeminder_user}});
           log({m: "failed to disable user", beeminder_user, e: writeError});
         }
-        Sentry.captureException(e, {
-          extra: {beeminder_user, status: e.status, disabled},
-        });
-        log({
-          m: disabled ? "disabled user" : "auth error, user record moved on",
-          beeminder_user,
-          status: e.status,
-        });
       } else {
         Sentry.captureException(e, {extra: {beeminder_user}});
         log({m: "failed to handle user", beeminder_user, e});
