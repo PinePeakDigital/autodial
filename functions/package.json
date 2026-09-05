@@ -31,7 +31,7 @@
   },
   "dependencies": {
     "@sentry/cloudflare": "^8.47.0",
-    "@testing-library/jest-dom": "^5.16.1",
+    "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^12.1.2",
     "@testing-library/user-event": "^13.5.0",
     "@types/react": "^17.0.38",
@@ -51,10 +51,10 @@
     "eslint": "^7.6.0",
     "eslint-config-google": "^0.14.0",
     "eslint-plugin-import": "^2.22.0",
-    "jest": "^27.4.7",
-    "ts-jest": "^27.1.3",
+    "jest": "^30.5.1",
+    "ts-jest": "^27.1.5",
     "typescript": "^4.3.4",
-    "wrangler": "^3.78.0"
+    "wrangler": "^4.129.0"
   },
   "private": true,
   "overrides": {
