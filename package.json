@@ -5,16 +5,16 @@
   "dependencies": {
     "@emotion/react": "^11.7.1",
     "@emotion/styled": "^11.6.0",
-    "@mui/icons-material": "^5.3.1",
-    "@mui/lab": "^5.0.0-alpha.63",
-    "@mui/material": "^5.2.7",
-    "@sentry/react": "^7.120.3",
+    "@mui/icons-material": "^9.4.0",
+    "@mui/lab": "^6.0.0-dev.20240529-082515-213b5e33ab",
+    "@mui/material": "^9.4.0",
+    "@sentry/react": "^10.73.0",
     "lodash": "^4.17.21",
     "moment": "^2.29.1",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "react-query": "^3.34.16",
-    "web-vitals": "^1.0.1"
+    "web-vitals": "^6.2.1"
   },
   "scripts": {
     "start": "vite",
@@ -37,24 +37,24 @@
     ]
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^12.1.5",
-    "@types/jest": "^29.5.14",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@types/jest": "^30.0.0",
     "@types/lodash": "~4.17.25",
-    "@types/node": "^20.19.43",
-    "@types/react": "^17.0.0",
-    "@types/react-dom": "^17.0.0",
-    "@typescript-eslint/eslint-plugin": "^4.28.0",
-    "@typescript-eslint/parser": "^4.28.0",
+    "@types/node": "^26.5.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@typescript-eslint/eslint-plugin": "^8.70.0",
+    "@typescript-eslint/parser": "^8.70.0",
     "@vitejs/plugin-react": "^6.1.1",
-    "eslint": "^7.29.0",
+    "eslint": "^10.10.0",
     "eslint-config-google": "^0.14.0",
-    "eslint-config-prettier": "^8.5.0",
+    "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.23.4",
-    "jsdom": "^27.4.0",
-    "prettier": "2.7.1",
-    "typescript": "^5.9.3",
+    "jsdom": "^30.0.1",
+    "prettier": "3.9.6",
+    "typescript": "^7.0.2",
     "vite": "^8.2.2",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.0"
   }
 }

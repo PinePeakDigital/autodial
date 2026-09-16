@@ -30,19 +30,19 @@
     "node": ">=22.0.0"
   },
   "dependencies": {
-    "@sentry/cloudflare": "^8.47.0"
+    "@sentry/cloudflare": "^10.73.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260908.1",
     "@types/jest": "^30.0.0",
     "@typescript-eslint/eslint-plugin": "^8.70.0",
     "@typescript-eslint/parser": "^8.70.0",
-    "eslint": "^8.57.1",
+    "eslint": "^10.10.0",
     "eslint-config-google": "^0.14.0",
     "eslint-plugin-import": "^2.32.0",
     "jest": "^30.5.1",
     "ts-jest": "^29.4.12",
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.2",
     "wrangler": "^4.130.0"
   },
   "private": true,
