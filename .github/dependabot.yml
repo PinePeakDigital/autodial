@@ -13,13 +13,25 @@ updates:
         applies-to: version-updates
         patterns: ["*"]
         update-types: ["minor", "patch"]
-      npm-major:
-        applies-to: version-updates
-        patterns: ["*"]
-        update-types: ["major"]
+      # No npm-major group on purpose. Grouped majors are all-or-nothing, and
+      # this repo's backlog has several INDEPENDENT walls, so one bundle can
+      # never go green. PR #103 (22 majors) hit three in a row: @mui/lab pinned
+      # to a 2024 dev prerelease whose peer wants @mui/material ^6.0.0-dev,
+      # then @typescript-eslint/eslint-plugin peering typescript >=4.8.4 <6.1.0
+      # against TS 7, then eslint-plugin-import topping out at eslint 9 against
+      # eslint 10. Each fix only revealed the next. Ungrouped, each major
+      # arrives on its own and is judged alone. See issue #84.
       npm-security:
         applies-to: security-updates
         patterns: ["*"]
+    ignore:
+      # typescript-eslint cannot run under TypeScript 7 — it throws
+      # "typescript-eslint does not support TS 7.0" and its peer range caps at
+      # <6.1.0. Tracking:
+      # https://github.com/typescript-eslint/typescript-eslint/issues/10940
+      # Same rule as pixelteer, blog, hitchhikers-ai, yootilities, automations.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
