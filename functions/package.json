@@ -33,17 +33,17 @@
     "@sentry/cloudflare": "^8.47.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260908.1",
+    "@cloudflare/workers-types": "^5.20260920.1",
     "@types/jest": "^30.0.0",
     "@typescript-eslint/eslint-plugin": "^8.70.0",
     "@typescript-eslint/parser": "^8.70.0",
     "eslint": "^8.57.1",
     "eslint-config-google": "^0.14.0",
     "eslint-plugin-import": "^2.32.0",
-    "jest": "^30.5.1",
+    "jest": "^30.5.2",
     "ts-jest": "^29.4.12",
     "typescript": "^5.9.3",
-    "wrangler": "^4.130.0"
+    "wrangler": "^4.135.0"
   },
   "private": true,
   "overrides": {
