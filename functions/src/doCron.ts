@@ -48,7 +48,7 @@ const doCron = async (kv: KVNamespace, dryRun = false): Promise<void> => {
               diffSince,
           );
           settings.fromGoal = settings.from && await getGoal(
-              beeminder_user, beeminder_token, settings.from, diffSince
+              beeminder_user, beeminder_token, settings.from, diffSince,
           ) || undefined;
           const roadall = dial(fullGoal, settings);
           const newRate = roadall && roadall[roadall.length - 1][2];
@@ -63,7 +63,7 @@ const doCron = async (kv: KVNamespace, dryRun = false): Promise<void> => {
                 beeminder_user,
                 beeminder_token,
                 g.slug,
-                {roadall}
+                {roadall},
             );
           }
         } catch (e) {
@@ -91,7 +91,7 @@ const doCron = async (kv: KVNamespace, dryRun = false): Promise<void> => {
 
         try {
           const disabled = await disableUser(
-              kv, beeminder_user, beeminder_token, e.message
+              kv, beeminder_user, beeminder_token, e.message,
           );
           log({
             m: disabled ? "disabled user" : "auth error, user record moved on",

@@ -17,7 +17,7 @@ class FakeResponse {
   headers: { get: (k: string) => string | null };
   constructor(
       _body: unknown,
-      init?: {status?: number; headers?: Record<string, string>}
+      init?: {status?: number; headers?: Record<string, string>},
   ) {
     this.status = init?.status ?? 200;
     const h = new Map(Object.entries(init?.headers ?? {}));
@@ -47,7 +47,7 @@ function reqWithUnparsableBody(method: string, path: string): Request {
     url: `https://w.dev${path}`,
     json: async () => {
       throw new SyntaxError(
-          "No number after minus sign in JSON at position 1 (line 1 column 2)"
+          "No number after minus sign in JSON at position 1 (line 1 column 2)",
       );
     },
   } as unknown as Request;
@@ -68,7 +68,7 @@ describe("worker fetch", () => {
   it("routes /update to doUpdate", async () => {
     const res = await handlers.fetch(
         req("POST", "/update", {user: "u", token: "t"}),
-        env
+        env,
     );
     expect(res.status).toBe(200);
     expect(doUpdate).toHaveBeenCalledWith(env.USERS, "u", "t");
@@ -77,7 +77,7 @@ describe("worker fetch", () => {
   it("routes /remove to doRemove", async () => {
     const res = await handlers.fetch(
         req("POST", "/remove", {user: "u", token: "t"}),
-        env
+        env,
     );
     expect(res.status).toBe(200);
     expect(doRemove).toHaveBeenCalledWith(env.USERS, "u", "t");
@@ -94,7 +94,7 @@ describe("worker fetch", () => {
     (Sentry.captureException as jest.Mock).mockClear();
     const res = await handlers.fetch(
         reqWithUnparsableBody("POST", "/index.php"),
-        env
+        env,
     );
     expect(res.status).toBe(404);
     expect(Sentry.captureException).not.toHaveBeenCalled();
@@ -104,7 +104,7 @@ describe("worker fetch", () => {
     (doUpdate as jest.Mock).mockRejectedValueOnce(new Error("boom"));
     const res = await handlers.fetch(
         req("POST", "/update", {user: "u", token: "t"}),
-        env
+        env,
     );
     expect(res.status).toBe(500);
   });
@@ -112,22 +112,25 @@ describe("worker fetch", () => {
   // The route check now runs before the body is parsed, but a known route
   // still needs to parse its body — an unparsable one there is a real
   // application error, not scanner noise, and must still be reported.
-  it("500s and reports to Sentry when a known route's body can't be parsed", async () => {
-    (Sentry.captureException as jest.Mock).mockClear();
-    const res = await handlers.fetch(
-        reqWithUnparsableBody("POST", "/update"),
-        env
-    );
-    expect(res.status).toBe(500);
-    expect(Sentry.captureException).toHaveBeenCalled();
-  });
+  it(
+      "500s and reports to Sentry on an unparsable known-route body",
+      async () => {
+        (Sentry.captureException as jest.Mock).mockClear();
+        const res = await handlers.fetch(
+            reqWithUnparsableBody("POST", "/update"),
+            env,
+        );
+        expect(res.status).toBe(500);
+        expect(Sentry.captureException).toHaveBeenCalled();
+      },
+  );
 });
 
 describe("worker scheduled", () => {
   it("dials all users, passing the DRY_RUN flag", async () => {
     await handlers.scheduled(
         {} as ScheduledController,
-        {USERS: {} as KVNamespace, DRY_RUN: "true"}
+        {USERS: {} as KVNamespace, DRY_RUN: "true"},
     );
     expect(doCron).toHaveBeenCalledWith(expect.anything(), true);
   });

@@ -1,7 +1,5 @@
 import {getUsers, updateUser, removeUser, disableUser} from "./database";
 
-/* eslint-disable camelcase */
-
 type Page = {
   keys: {
     name: string;
@@ -92,7 +90,7 @@ describe("database (KV)", () => {
       expect(kv.put).toHaveBeenCalledWith(
           "alice",
           "",
-          {metadata: {token: "tok"}}
+          {metadata: {token: "tok"}},
       );
     });
 
@@ -102,7 +100,7 @@ describe("database (KV)", () => {
       expect(kv.put).toHaveBeenCalledWith(
           "alice",
           "",
-          {metadata: {token: "new_tok"}}
+          {metadata: {token: "new_tok"}},
       );
       // No disabledAt/disabledReason in the written metadata: a prior
       // disableUser() call is fully overwritten, not merged.
@@ -138,7 +136,7 @@ describe("database (KV)", () => {
       const kv = makeKv([], {token: "fresh-tok"});
 
       await expect(disableUser(kv, "alice", "dead-tok", "401")).resolves.toBe(
-          false
+          false,
       );
       expect(kv.put).not.toHaveBeenCalled();
     });
@@ -147,7 +145,7 @@ describe("database (KV)", () => {
       const kv = makeKv([], null);
 
       await expect(disableUser(kv, "alice", "dead-tok", "401")).resolves.toBe(
-          false
+          false,
       );
       expect(kv.put).not.toHaveBeenCalled();
     });
@@ -156,7 +154,7 @@ describe("database (KV)", () => {
       const kv = makeKv([], {token: "dead-tok"});
 
       await expect(disableUser(kv, "alice", "dead-tok", "401")).resolves.toBe(
-          true
+          true,
       );
       expect(kv.put).toHaveBeenCalled();
     });

@@ -34,7 +34,7 @@ export async function getUsers(kv: KVNamespace): Promise<User[]> {
 export async function updateUser(
     kv: KVNamespace,
     user: string,
-    token: string
+    token: string,
 ): Promise<void> {
   await kv.put(user, "", {metadata: {token}});
 }

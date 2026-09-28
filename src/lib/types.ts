@@ -62,10 +62,8 @@ export type Goal = {
    */
   fullroad: Fullroad;
   fineprint: string | null;
-  // eslint-disable-next-line camelcase
   weekends_off: boolean;
   mathishard: DenseSegment;
-  // eslint-disable-next-line camelcase
   goal_type: GoalType;
   odom: boolean;
 };
@@ -75,9 +73,7 @@ export type GoalVerbose = {
 } & Goal;
 
 export type User = {
-  // eslint-disable-next-line camelcase
   beeminder_token: string;
-  // eslint-disable-next-line camelcase
   beeminder_user: string;
   // Set when a 401/404 from Beeminder indicates a permanently dead
   // credential. Cron skips these users without fetching. Re-authorizing
