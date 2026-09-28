@@ -25,7 +25,7 @@ describe("doUpdate", () => {
       await doUpdate(
           kv,
           "the_user",
-          "the_token"
+          "the_token",
       );
     }).rejects.toThrow(expect.anything());
   });

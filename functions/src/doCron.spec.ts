@@ -83,7 +83,7 @@ describe("function", () => {
     await runCron();
 
     expect(dial).toHaveBeenCalledWith(
-        goal, expect.objectContaining({min: 1.5})
+        goal, expect.objectContaining({min: 1.5}),
     );
   });
 
@@ -97,7 +97,7 @@ describe("function", () => {
     await runCron();
 
     expect(dial).toHaveBeenCalledWith(
-        goal, expect.objectContaining({max: 1.5})
+        goal, expect.objectContaining({max: 1.5}),
     );
   });
 
@@ -124,7 +124,7 @@ describe("function", () => {
 
     expect(updateGoal).toHaveBeenCalledWith(
         "the_user", "the_token", "the_slug",
-        {roadall: "the_new_road"}
+        {roadall: "the_new_road"},
     );
   });
 
@@ -171,7 +171,7 @@ describe("function", () => {
         "the_user",
         "the_token",
         "the_slug",
-        diffSince
+        diffSince,
     );
   });
 
@@ -198,7 +198,7 @@ describe("function", () => {
 
     expect(dial).toHaveBeenCalledWith(
         goal,
-        expect.objectContaining({strict: true})
+        expect.objectContaining({strict: true}),
     );
   });
 
@@ -215,7 +215,7 @@ describe("function", () => {
         expect.anything(),
         expect.anything(),
         "from_goal",
-        expect.anything()
+        expect.anything(),
     );
   });
 
@@ -229,7 +229,7 @@ describe("function", () => {
     await runCron();
 
     expect(dial).toHaveBeenCalledWith(
-        goal, expect.objectContaining({min: 1.5})
+        goal, expect.objectContaining({min: 1.5}),
     );
   });
 
@@ -261,7 +261,7 @@ describe("function", () => {
     await runCron();
 
     expect(mockLog).toHaveBeenCalledWith(
-        "skip dial goal the_user/the_slug: Goal ends too soon to dial"
+        "skip dial goal the_user/the_slug: Goal ends too soon to dial",
     );
   });
 
@@ -282,7 +282,7 @@ describe("function", () => {
         error,
         expect.objectContaining({
           extra: {beeminder_user: "the_user", slug: "the_slug"},
-        })
+        }),
     );
   });
 
@@ -296,7 +296,7 @@ describe("function", () => {
         kv,
         "the_user",
         "the_token",
-        error.message
+        error.message,
     );
   });
 
@@ -310,7 +310,7 @@ describe("function", () => {
         kv,
         "the_user",
         "the_token",
-        error.message
+        error.message,
     );
   });
 
@@ -326,7 +326,7 @@ describe("function", () => {
         error,
         expect.objectContaining({
           extra: {beeminder_user: "the_user", status: 401},
-        })
+        }),
     );
   });
 
@@ -341,7 +341,7 @@ describe("function", () => {
         error,
         expect.objectContaining({
           extra: {beeminder_user: "the_user", status: 401},
-        })
+        }),
     );
   });
 
@@ -357,13 +357,13 @@ describe("function", () => {
 
     expect(mockCaptureException).toHaveBeenCalledWith(
         writeError,
-        expect.objectContaining({extra: {beeminder_user: "the_user"}})
+        expect.objectContaining({extra: {beeminder_user: "the_user"}}),
     );
     expect(mockCaptureException).toHaveBeenCalledWith(
         error,
         expect.objectContaining({
           extra: {beeminder_user: "the_user", status: 401},
-        })
+        }),
     );
   });
 
@@ -385,7 +385,7 @@ describe("function", () => {
     const g = makeGoal({fineprint: "#autodial"});
     mockGetGoals.mockResolvedValue([g]);
     mockGetGoal.mockRejectedValue(
-        new BeeminderAuthError(401, "Fetch error: 401 - ...")
+        new BeeminderAuthError(401, "Fetch error: 401 - ..."),
     );
 
     await runCron();
@@ -398,7 +398,7 @@ describe("function", () => {
         expect.any(BeeminderAuthError),
         expect.objectContaining({
           extra: expect.objectContaining({slug: g.slug}),
-        })
+        }),
     );
   });
 

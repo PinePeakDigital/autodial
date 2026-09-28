@@ -98,5 +98,5 @@ export default Sentry.withSentry(
     // workers-types Request; the shape is correct at runtime (handlers is
     // fully typed above). Cast to withSentry's own param type (avoids the
     // ban-ts-comment rule that forbids @ts-expect-error here).
-    handlers as unknown as Parameters<typeof Sentry.withSentry>[1]
+    handlers as unknown as Parameters<typeof Sentry.withSentry>[1],
 );

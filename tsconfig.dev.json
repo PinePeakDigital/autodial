@@ -3,6 +3,6 @@
     "esModuleInterop": true
   },
   "include": [
-    "./.eslintrc.js"
+    "./eslint.config.js"
   ]
 }
