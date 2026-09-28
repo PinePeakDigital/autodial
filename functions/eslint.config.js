@@ -6,6 +6,7 @@
 const js = require("@eslint/js");
 const { FlatCompat } = require("@eslint/eslintrc");
 const tsPlugin = require("@typescript-eslint/eslint-plugin");
+const importPlugin = require("eslint-plugin-import");
 const globals = require("globals");
 
 const compat = new FlatCompat({
@@ -22,14 +23,14 @@ module.exports = [
     ignores: ["lib/**", "node_modules/**", "eslint.config.js"],
   },
   js.configs.recommended,
-  // plugin:import/errors, plugin:import/warnings, plugin:import/typescript,
-  // then "google" — same order as the old extends array, via the official
-  // eslintrc compat layer (neither ships a native flat config).
-  ...compat.extends(
-    "plugin:import/errors",
-    "plugin:import/warnings",
-    "plugin:import/typescript",
-  ),
+  // plugin:import/errors, plugin:import/warnings, plugin:import/typescript
+  // — eslint-plugin-import ships these as native flat configs, so no
+  // compat layer needed. "google" comes next, same order as the old
+  // extends array; it has no flat export, so it's the one that needs
+  // the eslintrc compat layer below.
+  importPlugin.flatConfigs.errors,
+  importPlugin.flatConfigs.warnings,
+  importPlugin.flatConfigs.typescript,
   ...compat.extends("google"),
   // plugin:@typescript-eslint/recommended's flat form, plus the
   // TS-specific "eslint-recommended" overlay that turns off core rules

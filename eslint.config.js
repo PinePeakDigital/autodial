@@ -5,6 +5,7 @@
 const js = require("@eslint/js");
 const { FlatCompat } = require("@eslint/eslintrc");
 const tsPlugin = require("@typescript-eslint/eslint-plugin");
+const importPlugin = require("eslint-plugin-import");
 const prettierConfig = require("eslint-config-prettier");
 const globals = require("globals");
 
@@ -22,14 +23,14 @@ module.exports = [
     ignores: ["build/**", "coverage/**", "node_modules/**", "eslint.config.js"],
   },
   js.configs.recommended,
-  // plugin:import/errors, plugin:import/warnings, plugin:import/typescript,
-  // then "google" — same order as the old extends array, via the official
-  // eslintrc compat layer (neither ships a native flat config).
-  ...compat.extends(
-    "plugin:import/errors",
-    "plugin:import/warnings",
-    "plugin:import/typescript",
-  ),
+  // plugin:import/errors, plugin:import/warnings, plugin:import/typescript
+  // — eslint-plugin-import ships these as native flat configs, so no
+  // compat layer needed. "google" comes next, same order as the old
+  // extends array; it has no flat export, so it's the one that needs
+  // the eslintrc compat layer below.
+  importPlugin.flatConfigs.errors,
+  importPlugin.flatConfigs.warnings,
+  importPlugin.flatConfigs.typescript,
   ...compat.extends("google"),
   // plugin:@typescript-eslint/recommended's flat form, plus the
   // TS-specific "eslint-recommended" overlay that turns off core rules
@@ -38,6 +39,17 @@ module.exports = [
   // like `describe`/`it`/`expect`, don't false-positive).
   ...tsPlugin.configs["flat/recommended"],
   tsPlugin.configs["flat/eslint-recommended"],
+  // eslint-config-prettier: turn off stylistic rules that conflict with
+  // Prettier. Its exported object is rules-only, so it's flat-config safe.
+  // MUST come before the project's own rules block below: eslintrc's
+  // "local `rules` always beats `extends`, regardless of extends order"
+  // guarantee does NOT carry over to flat config, where array position
+  // alone decides precedence (last write wins). Under the old .eslintrc.js
+  // this was listed last in `extends` and still didn't win over the local
+  // `rules` object; placing it after the equivalent block here would
+  // silently re-disable "quotes" and "max-len" instead (verified: with it
+  // placed after, eslint stopped flagging single-quoted strings).
+  prettierConfig,
   {
     languageOptions: {
       ecmaVersion: 2020,
@@ -70,9 +82,6 @@ module.exports = [
       "spaced-comment": ["error", "always", {markers: ["/"]}],
     },
   },
-  // eslint-config-prettier: turn off stylistic rules that conflict with
-  // Prettier. Its exported object is rules-only, so it's flat-config safe.
-  prettierConfig,
   {
     files: ["**/*.spec.+(ts|tsx)"],
     rules: {
