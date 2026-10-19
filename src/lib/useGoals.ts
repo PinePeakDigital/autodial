@@ -1,4 +1,4 @@
-import {useQuery, UseQueryResult} from "react-query";
+import {useQuery, UseQueryResult} from "@tanstack/react-query";
 import {getGoalsVerbose} from "./beeminder";
 import {now} from "./time";
 import {SID} from "./constants";
@@ -11,7 +11,7 @@ type GoalsError = Error
 
 export default function useGoals(): UseQueryResult<Goals, GoalsError> {
   const {user, token} = useParams();
-  return useQuery("goals", async () => {
+  return useQuery({queryKey: ["goals"], queryFn: async () => {
     if (!user || !token) return;
     const goals = await getGoalsVerbose(
         user,
@@ -22,5 +22,5 @@ export default function useGoals(): UseQueryResult<Goals, GoalsError> {
       return a.slug.localeCompare(b.slug);
     });
     return goals.filter((g: Goal) => getSettings(g).autodial);
-  });
+  }});
 }

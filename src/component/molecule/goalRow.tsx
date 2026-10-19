@@ -1,3 +1,4 @@
+import type {JSX} from "react";
 import { Box, TableCell, TableRow } from "@mui/material";
 import {
   AutodialSettings,

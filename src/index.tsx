@@ -1,11 +1,11 @@
 import React from "react";
-import ReactDOM from "react-dom";
+import {createRoot} from "react-dom/client";
 import * as Sentry from "@sentry/react";
 import "./index.css";
 import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 import {redactToken} from "./lib/redactToken";
-import {QueryClient, QueryClientProvider} from "react-query";
+import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
 
 // No-op unless a DSN is configured (VITE_SENTRY_DSN build var).
 if (import.meta.env.VITE_SENTRY_DSN) {
@@ -42,13 +42,12 @@ if (import.meta.env.VITE_SENTRY_DSN) {
 
 const queryClient = new QueryClient();
 
-ReactDOM.render(
+createRoot(document.getElementById("root") as HTMLElement).render(
     <React.StrictMode>
       <QueryClientProvider client={queryClient}>
         <App />
       </QueryClientProvider>
     </React.StrictMode>,
-    document.getElementById("root"),
 );
 
 // If you want to start measuring performance in your app, pass a function

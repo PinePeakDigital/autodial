@@ -6,7 +6,7 @@
 const js = require("@eslint/js");
 const { FlatCompat } = require("@eslint/eslintrc");
 const tsPlugin = require("@typescript-eslint/eslint-plugin");
-const importPlugin = require("eslint-plugin-import");
+const importPlugin = require("eslint-plugin-import-x");
 const globals = require("globals");
 
 const compat = new FlatCompat({
