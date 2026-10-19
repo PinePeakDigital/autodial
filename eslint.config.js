@@ -5,7 +5,7 @@
 const js = require("@eslint/js");
 const { FlatCompat } = require("@eslint/eslintrc");
 const tsPlugin = require("@typescript-eslint/eslint-plugin");
-const importPlugin = require("eslint-plugin-import");
+const importPlugin = require("eslint-plugin-import-x");
 const prettierConfig = require("eslint-config-prettier");
 const globals = require("globals");
 

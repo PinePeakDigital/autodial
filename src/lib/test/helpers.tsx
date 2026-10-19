@@ -1,6 +1,6 @@
 import {ReactElement} from "react";
 import {render, RenderResult} from "@testing-library/react";
-import {QueryClient, QueryClientProvider, setLogger} from "react-query";
+import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
 
 import * as time from "../time";
 
@@ -28,22 +28,10 @@ export function r(ui: ReactElement): RenderResult {
     {ui}</QueryClientProvider>);
 }
 
+// react-query v5 no longer logs query errors, so there is nothing to mute;
+// kept so specs can keep wrapping error-path assertions.
 export async function withMutedReactQueryLogger<T>(
     func: () => Promise<T>,
 ): Promise<T> {
-  const noop = () => {
-    // do nothing
-  };
-
-  setLogger({
-    log: noop,
-    warn: noop,
-    error: noop,
-  });
-
-  const result = await func();
-
-  setLogger(window.console);
-
-  return result;
+  return func();
 }

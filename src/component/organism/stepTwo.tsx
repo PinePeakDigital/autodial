@@ -1,10 +1,11 @@
+import type {JSX} from "react";
 import Tags from "./tags";
 import { LinearProgress } from "@mui/material";
 import GoalsTable from "./goalsTable";
 import React from "react";
 import useGoals from "../../lib/useGoals";
 import useParams from "../../lib/useParams";
-import { useIsFetching } from "react-query";
+import { useIsFetching } from "@tanstack/react-query";
 
 export default function StepTwo(): JSX.Element {
   const params = useParams();

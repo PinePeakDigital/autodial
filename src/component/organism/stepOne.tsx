@@ -1,5 +1,5 @@
-import {Alert} from "@mui/material";
-import {LoadingButton} from "@mui/lab";
+import type {JSX} from "react";
+import {Alert, Button} from "@mui/material";
 import React, {useEffect} from "react";
 import useUpdate from "../../lib/useUpdate";
 import useRemove from "../../lib/useRemove";
@@ -45,24 +45,24 @@ export default function StepOne(): JSX.Element {
             user {params.user}</Alert>}
 
     {!isAuthenticated &&
-        <LoadingButton
+        <Button
           variant={"contained"}
           color={"primary"}
           href={enableUrl}
-          loading={goals.isLoading || update.isLoading}
-        >Enable Autodialer</LoadingButton>
+          loading={goals.isLoading || update.isPending}
+        >Enable Autodialer</Button>
     }
 
     {isAuthenticated && <>
       <p>Connected Beeminder user: <strong><a
         href={`https://beeminder.com/${params.user}`} target={"_blank"}
         rel={"nofollow noreferrer"}>{params.user}</a></strong></p>
-      <LoadingButton
+      <Button
         variant="outlined"
         color="secondary"
         href={disableUrl}
-        loading={remove.isLoading}
-      >Disable Autodialer</LoadingButton>
+        loading={remove.isPending}
+      >Disable Autodialer</Button>
     </>}
   </>;
 }
