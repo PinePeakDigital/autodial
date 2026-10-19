@@ -11,16 +11,20 @@ type GoalsError = Error
 
 export default function useGoals(): UseQueryResult<Goals, GoalsError> {
   const {user, token} = useParams();
-  return useQuery({queryKey: ["goals"], queryFn: async () => {
-    if (!user || !token) return;
-    const goals = await getGoalsVerbose(
-        user,
-        token,
-        now() - (SID * 31),
-    );
-    goals.sort(function(a: Goal, b: Goal) {
-      return a.slug.localeCompare(b.slug);
-    });
-    return goals.filter((g: Goal) => getSettings(g).autodial);
-  }});
+  return useQuery({
+    queryKey: ["goals"],
+    enabled: !!user && !!token,
+    queryFn: async () => {
+      if (!user || !token) return [];
+      const goals = await getGoalsVerbose(
+          user,
+          token,
+          now() - (SID * 31),
+      );
+      goals.sort(function(a: Goal, b: Goal) {
+        return a.slug.localeCompare(b.slug);
+      });
+      return goals.filter((g: Goal) => getSettings(g).autodial);
+    },
+  });
 }
