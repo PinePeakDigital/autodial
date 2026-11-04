@@ -47,7 +47,7 @@
     "jest": "^30.5.2",
     "ts-jest": "^29.4.12",
     "typescript": "^5.9.3",
-    "wrangler": "^4.151.1"
+    "wrangler": "^4.157.0"
   },
   "private": true,
   "overrides": {
