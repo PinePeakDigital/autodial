@@ -73,7 +73,7 @@ const doCron = async (kv: KVNamespace, dryRun = false): Promise<void> => {
             log(`skip dial goal ${beeminder_user}/${g.slug}: ${e.message}`);
           } else {
             Sentry.captureException(e, {extra: {beeminder_user, slug: g.slug}});
-            log({m: "failed to dial goal", g, e});
+            log({m: "failed to dial goal", beeminder_user, g, e});
           }
         }
       }));
