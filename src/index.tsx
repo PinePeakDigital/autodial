@@ -6,6 +6,10 @@ import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 import {redactToken} from "./lib/redactToken";
 import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
+import {takeCredentialsFromUrl} from "./lib/browser";
+
+// Before Sentry starts, so the token never reaches an event.
+takeCredentialsFromUrl();
 
 // No-op unless a DSN is configured (VITE_SENTRY_DSN build var).
 if (import.meta.env.VITE_SENTRY_DSN) {

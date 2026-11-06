@@ -1,9 +1,9 @@
 import React from "react";
 import type { Mock } from "vitest";
-import { waitFor, screen } from "@testing-library/react";
+import { waitFor, screen, fireEvent } from "@testing-library/react";
 import App from "./App";
 
-import { getParams } from "./lib/browser";
+import { getCredentials, clearCredentials } from "./lib/browser";
 import {
   getGoal,
   getGoals,
@@ -21,7 +21,7 @@ vi.mock("./lib/browser");
 vi.mock("./lib/functions");
 vi.mock("./lib/beeminder");
 
-const mockGetParams = getParams as Mock;
+const mockGetCredentials = getCredentials as Mock;
 const mockUpdate = update as Mock;
 const mockRemove = remove as Mock;
 const mockGetGoals = getGoals as Mock;
@@ -29,7 +29,15 @@ const mockGetGoalsVerbose = getGoalsVerbose as Mock;
 const mockGetGoal = getGoal as Mock;
 
 function loadParams(params: string) {
-  mockGetParams.mockReturnValue(new URLSearchParams(params));
+  const p = new URLSearchParams(params);
+  mockGetCredentials.mockReturnValue({
+    user: p.get("username"),
+    token: p.get("access_token"),
+  });
+}
+
+async function disable() {
+  fireEvent.click(await screen.findByText("Disable Autodialer"));
 }
 
 function loadGoals(goals: GoalInput[]) {
@@ -64,7 +72,6 @@ function loadGoals(goals: GoalInput[]) {
 
 describe("Home page", () => {
   beforeEach(() => {
-    mockGetParams.mockReturnValue(new URLSearchParams(""));
     mockUpdate.mockResolvedValue(null);
     loadGoals([{ slug: "the_slug" }]);
     loadParams("?access_token=abc123&username=the_user");
@@ -251,21 +258,9 @@ describe("Home page", () => {
     });
   });
 
-  it("links disable button", async () => {
+  it("forgets stored credentials after disabling", async () => {
     const { getByText } = await r(<App />);
-
-    await waitFor(() => {
-      expect(getByText("Disable Autodialer")).toHaveAttribute(
-        "href",
-        "/?access_token=abc123&username=the_user&disable=true"
-      );
-    });
-  });
-
-  it("does not persist credentials if disabling", async () => {
-    loadParams("?access_token=abc123&username=the_user&disable=true");
-
-    const { getByText } = await r(<App />);
+    await disable();
 
     await waitFor(() => {
       expect(
@@ -275,13 +270,37 @@ describe("Home page", () => {
       ).toBeInTheDocument();
     });
 
-    expect(update).not.toBeCalled();
+    expect(clearCredentials).toBeCalled();
+    expect(getByText("Enable Autodialer")).toBeInTheDocument();
+  });
+
+  it("stays signed in when disabling fails", async () => {
+    await withMutedReactQueryLogger(async () => {
+      mockRemove.mockRejectedValue({ message: "the_error" });
+
+      await r(<App />);
+      await disable();
+
+      await screen.findByText("the_error");
+      expect(screen.getByText("Disable Autodialer")).toBeInTheDocument();
+      expect(clearCredentials).not.toBeCalled();
+    });
+  });
+
+  it("blocks disabling until the on-load update finishes", async () => {
+    mockUpdate.mockReturnValue(new Promise(() => {}));
+
+    await r(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Disable Autodialer").closest("button"))
+        .toBeDisabled();
+    });
   });
 
   it("deletes database user on disable", async () => {
-    loadParams("?access_token=abc123&username=the_user&disable=true");
-
     await r(<App />);
+    await disable();
 
     await waitFor(() => {
       expect(remove).toBeCalledWith("the_user", "abc123");
@@ -289,9 +308,8 @@ describe("Home page", () => {
   });
 
   it("does not show goals for disabled user", async () => {
-    loadParams("?access_token=abc123&username=the_user&disable=true");
-
     const { getByText, queryByText } = await r(<App />);
+    await disable();
 
     await waitFor(() => {
       expect(
@@ -497,9 +515,8 @@ describe("Home page", () => {
   it("displays remove error", async () => {
     await withMutedReactQueryLogger(async () => {
       mockRemove.mockRejectedValue({ message: "the_error" });
-      loadParams("?access_token=abc123&username=the_user&disable=true");
-
       await r(<App />);
+      await disable();
 
       await waitFor(() => {
         expect(screen.getByText("the_error")).toBeInTheDocument();

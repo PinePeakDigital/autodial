@@ -17,19 +17,10 @@ export default function StepOne(): JSX.Element {
   const {VITE_APP_URL = "", VITE_BM_CLIENT_ID = ""} = import.meta.env;
   const redirectUri = encodeURIComponent(VITE_APP_URL);
   const enableUrl = `https://www.beeminder.com/apps/authorize?client_id=${VITE_BM_CLIENT_ID}&redirect_uri=${redirectUri}&response_type=token`;
-  const disableUrl =
-    `/?access_token=${params.token}&username=${params.user}&disable=true`;
-
-  const {user, token, disable} = params;
+  const {user, token} = params;
 
   useEffect(() => {
-    if (!user || !token) return;
-
-    if (disable) {
-      remove.mutate({user, token});
-    } else {
-      update.mutate({user, token});
-    }
+    if (user && token) update.mutate({user, token});
   },
   [user, token]);
 
@@ -42,7 +33,7 @@ export default function StepOne(): JSX.Element {
 
     {remove.isSuccess &&
         <Alert severity="success">The autodialer has been disabled for Beeminder
-            user {params.user}</Alert>}
+            user {remove.variables?.user}</Alert>}
 
     {!isAuthenticated &&
         <Button
@@ -60,8 +51,10 @@ export default function StepOne(): JSX.Element {
       <Button
         variant="outlined"
         color="secondary"
-        href={disableUrl}
+        onClick={() => user && token && remove.mutate({user, token})}
         loading={remove.isPending}
+        // Wait for the on-load /update, so it can't land after /remove.
+        disabled={update.isPending}
       >Disable Autodialer</Button>
     </>}
   </>;
