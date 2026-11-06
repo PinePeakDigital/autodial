@@ -33,7 +33,7 @@ const doCron = async (kv: KVNamespace, dryRun = false): Promise<void> => {
     }
 
     try {
-      const all = await getGoals(beeminder_user, beeminder_token);
+      const all = await getGoals(beeminder_token);
       const toDial = all.filter((g: Goal) => getSettings(g).autodial);
 
       await Promise.all(toDial.map(async (g) => {
@@ -42,13 +42,12 @@ const doCron = async (kv: KVNamespace, dryRun = false): Promise<void> => {
           const settings = getSettings(g);
           const diffSince = now() - (SID * 31);
           const fullGoal = await getGoal(
-              beeminder_user,
               beeminder_token,
               g.slug,
               diffSince,
           );
           settings.fromGoal = settings.from && await getGoal(
-              beeminder_user, beeminder_token, settings.from, diffSince,
+              beeminder_token, settings.from, diffSince,
           ) || undefined;
           const roadall = dial(fullGoal, settings);
           const newRate = roadall && roadall[roadall.length - 1][2];
@@ -60,7 +59,6 @@ const doCron = async (kv: KVNamespace, dryRun = false): Promise<void> => {
 
           if (!dryRun) {
             await updateGoal(
-                beeminder_user,
                 beeminder_token,
                 g.slug,
                 {roadall},

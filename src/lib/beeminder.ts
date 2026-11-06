@@ -6,13 +6,12 @@ import {BeeminderAuthError} from "./beeminderAuthError";
 type WithErrors = { errors?: { message: string } };
 
 export async function getGoalsVerbose(
-    user: string,
     token: string,
     diffSince: number,
 ): Promise<GoalVerbose[]> {
-  const goals = await getGoals(user, token);
+  const goals = await getGoals(token);
   const results = await Promise.allSettled(goals.map((g) => {
-    return getGoal(user, token, g.slug, diffSince);
+    return getGoal(token, g.slug, diffSince);
   }));
   return results.flatMap((r) => {
     if (r.status === "fulfilled") {
@@ -24,12 +23,11 @@ export async function getGoalsVerbose(
   });
 }
 
-export async function getGoals(
-    user: string,
-    token: string,
-): Promise<Goal[]> {
+// Goal calls use `me`, so the access token alone decides whose goals are
+// read or written; no stored username goes into a Beeminder URL.
+export async function getGoals(token: string): Promise<Goal[]> {
   // Keep the token out of `url` so it never lands in the thrown/logged message.
-  const url = `https://www.beeminder.com/api/v1/users/${user}/goals.json?filter=frontburner`;
+  const url = "https://www.beeminder.com/api/v1/users/me/goals.json?filter=frontburner";
   const response = await fetch(`${url}&access_token=${token}`);
 
   if (!response.ok) {
@@ -51,13 +49,12 @@ export async function getGoals(
 }
 
 export async function getGoal(
-    user: string,
     token: string,
     slug: string,
     diffSince: number,
 ): Promise<GoalVerbose> {
   // Keep the token out of `url` so it never lands in the thrown/logged message.
-  const url = `https://www.beeminder.com/api/v1/users/${user}/goals/${slug}.json?diff_since=${diffSince}&datapoints=true`;
+  const url = `https://www.beeminder.com/api/v1/users/me/goals/${slug}.json?diff_since=${diffSince}&datapoints=true`;
   const response = await fetch(`${url}&access_token=${token}`);
 
   if (!response.ok) {
@@ -107,12 +104,11 @@ export async function getMe(token: string): Promise<string> {
 }
 
 export async function updateGoal(
-    user: string,
     token: string,
     slug: string,
     fields: {roadall: Roadall},
 ): Promise<Omit<Goal, "datapoints">> {
-  const url = `https://www.beeminder.com/api/v1/users/${user}/goals/${slug}.json`;
+  const url = `https://www.beeminder.com/api/v1/users/me/goals/${slug}.json`;
   const putData = {
     ...fields,
     roadall: JSON.stringify(fields.roadall),

@@ -152,7 +152,7 @@ describe("Home page", () => {
     await r(<App />);
 
     await waitFor(() => {
-      expect(getGoalsVerbose).toBeCalledWith("the_user", "abc123", diffSince);
+      expect(getGoalsVerbose).toBeCalledWith("abc123", diffSince);
     });
   });
 
