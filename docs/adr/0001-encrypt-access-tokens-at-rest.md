@@ -1,6 +1,6 @@
 # Encrypt access tokens at rest under a single Worker-secret key
 
-Autodialer must store every user's Beeminder access token so the daily cron can dial their goals, and until 2026-11 they sat in plaintext KV metadata, where one `kv.list()` (or any Cloudflare credential with KV access on the account) returns all of them. After the 2026-11-06 `tskrtcht` token incident, access tokens are encrypted with AES-GCM under one key held as a Worker secret, which the Cloudflare API cannot read back, so a KV dump alone is useless.
+Autodialer must store every user's Beeminder access token so the daily cron can dial their goals, and until 2026-11 they sat in plaintext KV metadata, where one `kv.list()` (or any Cloudflare credential with KV access on the account) returns all of them. After a token incident, access tokens are encrypted with AES-GCM under one key held as a Worker secret, which the Cloudflare API cannot read back, so a KV dump alone is useless.
 
 ## Considered Options
 

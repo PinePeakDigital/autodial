@@ -25,7 +25,9 @@ const doCron = async (
 
   // A sealed record that won't decrypt suggests TOKEN_KEY changed. Sealing the
   // remaining plaintext under that key could lose those tokens once the right
-  // key is back, so leave them alone this run.
+  // key is back, so leave them alone this run. A lone corrupt record also
+  // blocks sealing; the per-record Sentry error names it, and removing it or
+  // having that user re-authorize unblocks the rest.
   const unreadable = users.filter((u) => u.unreadable).length;
   const plaintext = users.filter((u) => u.plaintext).length;
   log({m: "cron users", total: users.length, plaintext, unreadable});
