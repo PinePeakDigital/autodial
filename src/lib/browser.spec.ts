@@ -62,6 +62,22 @@ describe("browser", () => {
       expect(window.location.search).toBe("");
       expect(getCredentials()).toEqual({user: "alice", token: "abc"});
     });
+
+    it("drops an older stored user when the new write fails", () => {
+      sessionStorage.setItem(
+          "autodial_credentials", JSON.stringify({user: "bob", token: "old"}),
+      );
+      vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+        throw new Error("quota");
+      });
+      window.history.replaceState(
+          null, "", "/?access_token=abc&username=alice",
+      );
+
+      takeCredentialsFromUrl();
+
+      expect(sessionStorage.getItem("autodial_credentials")).toBeNull();
+    });
   });
 
   describe("getCredentials", () => {

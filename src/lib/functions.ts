@@ -5,6 +5,8 @@ async function call(path: string, body: unknown): Promise<void> {
     method: "POST",
     headers: {"Content-Type": "application/json"},
     body: JSON.stringify(body),
+    // A hung /update would otherwise keep the Disable button blocked.
+    signal: AbortSignal.timeout(30_000),
   });
 
   if (!res.ok) {

@@ -19,6 +19,9 @@ export function takeCredentialsFromUrl(): void {
   if (params.get("disable") === "true") return;
   memory = {user: params.get("username"), token};
   try {
+    // Remove first, so a failed write can't leave an older user to come back
+    // on reload.
+    sessionStorage.removeItem(KEY);
     sessionStorage.setItem(KEY, JSON.stringify(memory));
   } catch {
     // Storage blocked: the in-memory copy covers this page load.
