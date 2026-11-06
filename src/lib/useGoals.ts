@@ -17,7 +17,6 @@ export default function useGoals(): UseQueryResult<Goals, GoalsError> {
     queryFn: async () => {
       if (!user || !token) return [];
       const goals = await getGoalsVerbose(
-          user,
           token,
           now() - (SID * 31),
       );

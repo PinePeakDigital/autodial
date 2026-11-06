@@ -54,10 +54,11 @@ function reqWithUnparsableBody(method: string, path: string): Request {
 }
 
 describe("worker fetch", () => {
-  it("answers OPTIONS preflight with CORS", async () => {
+  // Same-origin only: no preflight, no CORS headers for other sites.
+  it("rejects OPTIONS without CORS headers", async () => {
     const res = await handlers.fetch(req("OPTIONS", "/update"), env);
-    expect(res.status).toBe(204);
-    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
+    expect(res.status).toBe(405);
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBeNull();
   });
 
   it("rejects non-POST methods", async () => {
@@ -71,7 +72,7 @@ describe("worker fetch", () => {
         env,
     );
     expect(res.status).toBe(200);
-    expect(doUpdate).toHaveBeenCalledWith(env.USERS, "u", "t");
+    expect(doUpdate).toHaveBeenCalledWith(env.USERS, "t");
   });
 
   it("routes /remove to doRemove", async () => {
@@ -80,7 +81,7 @@ describe("worker fetch", () => {
         env,
     );
     expect(res.status).toBe(200);
-    expect(doRemove).toHaveBeenCalledWith(env.USERS, "u", "t");
+    expect(doRemove).toHaveBeenCalledWith(env.USERS, "t");
   });
 
   it("404s unknown paths", async () => {

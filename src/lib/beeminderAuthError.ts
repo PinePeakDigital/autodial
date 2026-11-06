@@ -1,5 +1,5 @@
 // Thrown by the beeminder client for a 401/404 response — a permanently
-// dead credential (revoked token, deleted/renamed user), as opposed to a
+// dead credential (revoked token, deleted account), as opposed to a
 // transient failure.
 //
 // Only the account-level `getGoals` call is treated as grounds for disabling

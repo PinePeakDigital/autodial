@@ -58,7 +58,7 @@ describe("function", () => {
   it("gets beeminder goals", async () => {
     await runCron();
 
-    expect(getGoals).toHaveBeenCalledWith("the_user", "the_token");
+    expect(getGoals).toHaveBeenCalledWith("the_token");
   });
 
   it("dials goals", async () => {
@@ -123,7 +123,7 @@ describe("function", () => {
     await runCron();
 
     expect(updateGoal).toHaveBeenCalledWith(
-        "the_user", "the_token", "the_slug",
+        "the_token", "the_slug",
         {roadall: "the_new_road"},
     );
   });
@@ -168,7 +168,6 @@ describe("function", () => {
     await runCron();
 
     expect(getGoal).toHaveBeenCalledWith(
-        "the_user",
         "the_token",
         "the_slug",
         diffSince,
@@ -212,7 +211,6 @@ describe("function", () => {
     await runCron();
 
     expect(getGoal).toHaveBeenCalledWith(
-        expect.anything(),
         expect.anything(),
         "from_goal",
         expect.anything(),

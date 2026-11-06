@@ -12,13 +12,6 @@ export interface Env {
   SENTRY_DSN?: string;
 }
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-  "Access-Control-Max-Age": "3600",
-};
-
 // Exported unwrapped for tests; the default export wraps these with Sentry.
 export const handlers = {
   // Cron trigger — replaces the old public HTTP cron endpoint
@@ -28,12 +21,8 @@ export const handlers = {
   },
 
   async fetch(req: Request, env: Env): Promise<Response> {
-    if (req.method === "OPTIONS") {
-      return new Response(null, {status: 204, headers: CORS});
-    }
-
     if (req.method !== "POST") {
-      return new Response("Method not allowed", {status: 405, headers: CORS});
+      return new Response("Method not allowed", {status: 405});
     }
 
     const {pathname} = new URL(req.url);
@@ -43,23 +32,25 @@ export const handlers = {
     // SyntaxError, a captured Sentry event and a 500, and the 404 below was
     // unreachable for them.
     if (pathname !== "/update" && pathname !== "/remove") {
-      return new Response("Not found", {status: 404, headers: CORS});
+      return new Response("Not found", {status: 404});
     }
 
     try {
-      const {user, token} = await req.json<{ user: string; token: string }>();
+      // Any `user` field the client sends is ignored: getMe asks Beeminder
+      // whose access token this is.
+      const {token} = await req.json<{ token: string }>();
 
       if (pathname === "/update") {
-        await doUpdate(env.USERS, user, token);
+        await doUpdate(env.USERS, token);
       } else {
-        await doRemove(env.USERS, user, token);
+        await doRemove(env.USERS, token);
       }
 
-      return new Response("Success", {status: 200, headers: CORS});
+      return new Response("Success", {status: 200});
     } catch (e) {
       Sentry.captureException(e);
       console.error(e);
-      return new Response("Error", {status: 500, headers: CORS});
+      return new Response("Error", {status: 500});
     }
   },
 };
