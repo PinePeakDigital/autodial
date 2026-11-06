@@ -3,6 +3,7 @@ import doCron from "./doCron";
 import doUpdate from "./doUpdate";
 import doRemove from "./doRemove";
 import {redactToken} from "../../src/lib/redactToken";
+import {importTokenKey} from "./tokenCrypto";
 
 export interface Env {
   USERS: KVNamespace;
@@ -10,6 +11,9 @@ export interface Env {
   DRY_RUN?: string;
   // Sentry DSN; unset disables Sentry (no-op).
   SENTRY_DSN?: string;
+  // base64 of 32 random bytes; seals access tokens in KV. Required: without
+  // it the cron and /update throw rather than store plaintext.
+  TOKEN_KEY?: string;
 }
 
 // Exported unwrapped for tests; the default export wraps these with Sentry.
@@ -17,7 +21,8 @@ export const handlers = {
   // Cron trigger — replaces the old public HTTP cron endpoint
   // + Cloud Scheduler.
   async scheduled(_event: ScheduledController, env: Env): Promise<void> {
-    await doCron(env.USERS, env.DRY_RUN === "true");
+    const key = await importTokenKey(env.TOKEN_KEY);
+    await doCron(env.USERS, key, env.DRY_RUN === "true");
   },
 
   async fetch(req: Request, env: Env): Promise<Response> {
@@ -41,7 +46,7 @@ export const handlers = {
       const {token} = await req.json<{ token: string }>();
 
       if (pathname === "/update") {
-        await doUpdate(env.USERS, token);
+        await doUpdate(env.USERS, await importTokenKey(env.TOKEN_KEY), token);
       } else {
         await doRemove(env.USERS, token);
       }

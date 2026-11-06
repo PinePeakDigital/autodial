@@ -79,4 +79,7 @@ export type User = {
   // credential. Cron skips these users without fetching. Re-authorizing
   // (updateUser) clears this by replacing the KV metadata wholesale.
   disabledAt?: number;
+  // Set when the token was read from a pre-encryption plaintext record, so the
+  // cron knows to re-store it sealed.
+  plaintext?: boolean;
 };

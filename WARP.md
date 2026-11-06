@@ -67,7 +67,8 @@ npm run build
 npm run test
 
 # Run the Worker locally (http://localhost:8787)
-# Set DRY_RUN=true in .dev.vars to skip writing goals back to Beeminder
+# .dev.vars needs TOKEN_KEY (openssl rand -base64 32); DRY_RUN=true skips
+# writing goals back to Beeminder
 npm run dev
 
 # Deploy the Worker
@@ -75,6 +76,9 @@ npm run deploy
 
 # First-time: create the KV namespace, then paste its id into wrangler.toml
 npx wrangler kv namespace create USERS
+
+# Count KV records still holding a plaintext token (counts only)
+./scripts/check-plaintext-tokens.sh
 ```
 
 ## Configuration
