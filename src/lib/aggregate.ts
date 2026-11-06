@@ -1,12 +1,16 @@
-import _, {sum} from "lodash";
 import {parseDate} from "./time";
 import {Aggday, Datapoint} from "./types";
+
+const sum = (vals: number[]) => vals.reduce((a, b) => a + b, 0);
 
 type Reducer = (values: number[]) => number | undefined
 
 function aggregateByDate(data: Datapoint[], reduce: Reducer): Datapoint[] {
-  const sets = _.groupBy(data, (d) => d.daystamp);
-  return _.map(sets, (s, k) =>
+  // A plain object, like lodash's groupBy: its integer-like daystamp keys
+  // iterate in ascending order.
+  const sets: Record<string, Datapoint[]> = {};
+  for (const d of data) (sets[d.daystamp] ??= []).push(d);
+  return Object.entries(sets).map(([k, s]) =>
     ({
       daystamp: k,
       timestamp: parseDate(k),

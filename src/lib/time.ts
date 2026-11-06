@@ -1,5 +1,3 @@
-import moment from "moment";
-
 export function now(): number {
   return Date.now() / 1000;
 }
@@ -15,13 +13,6 @@ export function parseDate(s: string): number {
   return Date.UTC(y, m - 1, d, 12) / 1000;
 }
 
-/* Fixes the supplied unixtime to 00:00:00 on the same day (uses Moment)
+/* Fixes the supplied unixtime to 00:00:00 UTC on the same day
  @param {Number} ut Unix time  */
-export const daysnap = (ut: number): number => {
-  const d = moment.unix(ut).utc();
-  d.hours(0);
-  d.minutes(0);
-  d.seconds(0);
-  d.milliseconds(0);
-  return d.unix();
-};
+export const daysnap = (ut: number): number => Math.floor(ut / 86400) * 86400;
