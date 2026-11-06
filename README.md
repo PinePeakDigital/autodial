@@ -22,9 +22,9 @@ static assets), the user API, and the dialing cron, backed by Workers KV.
 The Worker serves the built SPA from `../build` as static assets, exposes
 `POST /update` and `POST /remove` (called by the frontend), and runs a
 `scheduled()` cron handler that dials every stored user's goals. In production
-the SPA and API share an origin, so the frontend calls `/update` relatively
-(no CORS); local dev is cross-origin (`:3000` → `:8787`), which the Worker's
-CORS headers cover.
+the SPA and API share an origin, so the frontend calls `/update` relatively.
+The Worker sends no CORS headers; in local dev the Vite server proxies
+`/update` and `/remove` to the Worker on `:8787`, so calls stay same-origin.
 
 Run tests:
 

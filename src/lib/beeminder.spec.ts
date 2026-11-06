@@ -104,10 +104,12 @@ describe("beeminder client", () => {
       await expect(getMe("t")).rejects.toThrow("nope");
     });
 
-    it("throws when the body has no username", async () => {
-      mockFetch({json: async () => ({id: 1})});
-      await expect(getMe("t")).rejects.toThrow(/no username/);
-    });
+    it.each([[{id: 1}], [{username: ""}], [{username: 42}], [null]])(
+        "throws when the body has no usable username: %j",
+        async (body) => {
+          mockFetch({json: async () => body});
+          await expect(getMe("t")).rejects.toThrow(/no username/);
+        });
   });
 
   describe("updateGoal", () => {

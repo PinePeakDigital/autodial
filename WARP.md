@@ -82,9 +82,9 @@ npx wrangler kv namespace create USERS
 ### Environment Setup
 
 1. Copy `.env.example` to `.env` and set:
-   - `REACT_APP_BM_CLIENT_ID`: Beeminder test client ID
-   - `REACT_APP_APP_URL`: Local frontend URL (OAuth redirect), e.g. `http://localhost:3000`
-   - `REACT_APP_API_URL`: Worker URL, e.g. `http://localhost:8787`
+   - `VITE_BM_CLIENT_ID`: Beeminder test client ID
+   - `VITE_APP_URL`: Local frontend URL (OAuth redirect), e.g. `http://localhost:3000`
+   - `VITE_API_URL`: leave empty; the Vite dev server proxies `/update` and `/remove` to the Worker (`http://localhost:8787`), which sends no CORS headers
 
 2. Create Beeminder test client:
    - Go to Beeminder account settings
