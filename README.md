@@ -26,6 +26,11 @@ the SPA and API share an origin, so the frontend calls `/update` relatively.
 The Worker sends no CORS headers; in local dev the Vite server proxies
 `/update` and `/remove` to the Worker on `:8787`, so calls stay same-origin.
 
+Access tokens are stored in KV encrypted (AES-GCM) under the `TOKEN_KEY`
+Worker secret (see `docs/adr/0001-encrypt-access-tokens-at-rest.md`). Without
+it, `/update` and the cron fail rather than store plaintext. Keep a copy of
+the key somewhere safe: losing it means every user must re-authorize.
+
 Run tests:
 
 ```bash
@@ -33,7 +38,8 @@ cd functions/
 npm run test
 ```
 
-Run locally (set `DRY_RUN=true` in `.dev.vars` to avoid writing to Beeminder):
+Run locally. `.dev.vars` needs `TOKEN_KEY` (any `openssl rand -base64 32`);
+set `DRY_RUN=true` there too to avoid writing to Beeminder:
 
 ```bash
 npm run dev
@@ -45,6 +51,7 @@ npm run dev
 npm run build                            # build the SPA into ./build first
 cd functions/
 npx wrangler kv namespace create USERS   # paste the id into wrangler.toml
+openssl rand -base64 32 | npx wrangler secret put TOKEN_KEY   # back it up first
 npx wrangler deploy                       # deploys the Worker + SPA assets + cron
 ```
 
@@ -56,6 +63,13 @@ shape `getUsers` reads):
 
 ```bash
 functions/scripts/migrate-firestore-to-kv.sh
+```
+
+That script writes plaintext tokens; the next cron run seals them. To confirm
+none are left (prints counts only, never KV contents):
+
+```bash
+functions/scripts/check-plaintext-tokens.sh
 ```
 
 Needs gcloud read access to the old Firestore and an authed wrangler. Run it at

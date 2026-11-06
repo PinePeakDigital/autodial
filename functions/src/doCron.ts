@@ -1,5 +1,5 @@
 import * as Sentry from "@sentry/cloudflare";
-import {getUsers, disableUser} from "./database";
+import {getUsers, disableUser, encryptPlaintext} from "./database";
 import log from "../../src/lib/log";
 import {
   getGoal,
@@ -14,17 +14,53 @@ import {
 
 /* eslint-disable camelcase */
 
-const doCron = async (kv: KVNamespace, dryRun = false): Promise<void> => {
+const doCron = async (
+    kv: KVNamespace,
+    key: CryptoKey,
+    dryRun = false,
+): Promise<void> => {
   log(dryRun);
 
-  const users = await getUsers(kv);
+  const users = await getUsers(kv, key);
+
+  // A sealed record that won't decrypt suggests TOKEN_KEY changed. Sealing the
+  // remaining plaintext under that key could lose those tokens once the right
+  // key is back, so leave them alone this run. A lone corrupt record also
+  // blocks sealing; the per-record Sentry error names it, and removing it or
+  // having that user re-authorize unblocks the rest.
+  const unreadable = users.filter((u) => u.unreadable).length;
+  const plaintext = users.filter((u) => u.plaintext).length;
+  log({m: "cron users", total: users.length, plaintext, unreadable});
+  const sealPlaintext = unreadable === 0;
+  if (!sealPlaintext && plaintext) {
+    Sentry.captureMessage(
+        `${unreadable}/${users.length} tokens unreadable; ` +
+        "not sealing plaintext records this run",
+    );
+  }
 
   await Promise.all(users.map(async (
-      {beeminder_user, beeminder_token, disabledAt},
+      {beeminder_user, beeminder_token, disabledAt, plaintext},
   ) => {
     if (!beeminder_user || !beeminder_token) {
-      log("missing user auth");
+      log({m: "missing user auth", beeminder_user});
       return;
+    }
+
+    // Before the disabled check: a disabled record's token is still a secret
+    // sitting in KV. Runs in dry runs too: it rewrites the same token sealed,
+    // which changes nothing a user can see.
+    if (plaintext && sealPlaintext) {
+      try {
+        const sealed = await encryptPlaintext(
+            kv, key, beeminder_user, beeminder_token,
+        );
+        log({m: sealed ? "sealed plaintext token" : "plaintext record moved on",
+          beeminder_user});
+      } catch (e) {
+        Sentry.captureException(e, {extra: {beeminder_user}});
+        log({m: "failed to seal plaintext token", beeminder_user, e});
+      }
     }
 
     if (disabledAt) {
@@ -89,7 +125,7 @@ const doCron = async (kv: KVNamespace, dryRun = false): Promise<void> => {
 
         try {
           const disabled = await disableUser(
-              kv, beeminder_user, beeminder_token, e.message,
+              kv, key, beeminder_user, beeminder_token, e.message,
           );
           log({
             m: disabled ? "disabled user" : "auth error, user record moved on",

@@ -26,7 +26,7 @@ class FakeResponse {
 }
 (global as unknown as { Response: unknown }).Response = FakeResponse;
 
-const env = {USERS: {} as KVNamespace} as Env;
+const env = {USERS: {} as KVNamespace, TOKEN_KEY: "A".repeat(43) + "="} as Env;
 
 // The worker reads only req.method, req.url and req.json(), so a plain object
 // stands in for a Request without needing the (absent) global.
@@ -72,7 +72,7 @@ describe("worker fetch", () => {
         env,
     );
     expect(res.status).toBe(200);
-    expect(doUpdate).toHaveBeenCalledWith(env.USERS, "t");
+    expect(doUpdate).toHaveBeenCalledWith(env.USERS, expect.anything(), "t");
   });
 
   it("routes /remove to doRemove", async () => {
@@ -82,6 +82,15 @@ describe("worker fetch", () => {
     );
     expect(res.status).toBe(200);
     expect(doRemove).toHaveBeenCalledWith(env.USERS, "t");
+  });
+
+  it("500s /update without TOKEN_KEY, storing nothing", async () => {
+    const res = await handlers.fetch(
+        req("POST", "/update", {token: "t"}),
+        {USERS: {} as KVNamespace},
+    );
+    expect(res.status).toBe(500);
+    expect(doUpdate).not.toHaveBeenCalled();
   });
 
   it("404s unknown paths", async () => {
@@ -131,8 +140,18 @@ describe("worker scheduled", () => {
   it("dials all users, passing the DRY_RUN flag", async () => {
     await handlers.scheduled(
         {} as ScheduledController,
-        {USERS: {} as KVNamespace, DRY_RUN: "true"},
+        {...env, DRY_RUN: "true"},
     );
-    expect(doCron).toHaveBeenCalledWith(expect.anything(), true);
+    expect(doCron).toHaveBeenCalledWith(
+        env.USERS, expect.anything(), true,
+    );
+  });
+
+  it("refuses to run without TOKEN_KEY", async () => {
+    await expect(handlers.scheduled(
+        {} as ScheduledController,
+        {USERS: {} as KVNamespace},
+    )).rejects.toThrow("TOKEN_KEY is not set");
+    expect(doCron).not.toHaveBeenCalled();
   });
 });

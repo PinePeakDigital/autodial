@@ -14,7 +14,7 @@ import {
   BeeminderAuthError,
 } from "../../src/lib";
 import {setNow} from "../../src/lib/test/helpers";
-import {getUsers, disableUser} from "./database";
+import {getUsers, disableUser, encryptPlaintext} from "./database";
 import {makeGoal} from "./test/helpers";
 import log from "../../src/lib/log";
 
@@ -29,17 +29,21 @@ const mockGetGoal = getGoal as jest.Mock;
 const mockDial = dial as jest.Mock;
 const mockGetUsers = getUsers as jest.Mock;
 const mockDisableUser = disableUser as jest.Mock;
+const mockEncryptPlaintext = encryptPlaintext as jest.Mock;
 const mockLog = log as jest.Mock;
 const mockCaptureException = Sentry.captureException as jest.Mock;
+const mockCaptureMessage = Sentry.captureMessage as jest.Mock;
 
 function setGoal(g: Partial<Goal>) {
   mockGetGoal.mockResolvedValue(g as GoalVerbose);
   mockGetGoals.mockResolvedValue([g as Goal]);
 }
 
+const key = {} as CryptoKey;
+
 async function runCron() {
   const kv = {} as KVNamespace;
-  await doCron(kv);
+  await doCron(kv, key);
   return kv;
 }
 
@@ -292,6 +296,7 @@ describe("function", () => {
 
     expect(mockDisableUser).toHaveBeenCalledWith(
         kv,
+        key,
         "the_user",
         "the_token",
         error.message,
@@ -306,6 +311,7 @@ describe("function", () => {
 
     expect(mockDisableUser).toHaveBeenCalledWith(
         kv,
+        key,
         "the_user",
         "the_token",
         error.message,
@@ -414,7 +420,70 @@ describe("function", () => {
     expect(mockGetGoals).not.toHaveBeenCalled();
     expect(mockCaptureException).not.toHaveBeenCalled();
   });
-});
 
-// TODO:
-// log beeminder exceptions
+  it("seals a plaintext record, even for a disabled user", async () => {
+    mockGetUsers.mockResolvedValue([{
+      beeminder_user: "the_user",
+      beeminder_token: "the_token",
+      disabledAt: 1,
+      plaintext: true,
+    }]);
+    mockEncryptPlaintext.mockResolvedValue(true);
+
+    const kv = await runCron();
+
+    expect(mockEncryptPlaintext).toHaveBeenCalledWith(
+        kv, key, "the_user", "the_token",
+    );
+    expect(mockGetGoals).not.toHaveBeenCalled();
+  });
+
+  it("leaves sealed records alone", async () => {
+    await runCron();
+    expect(mockEncryptPlaintext).not.toHaveBeenCalled();
+  });
+
+  it("does not seal plaintext when another record is unreadable", async () => {
+    mockGetUsers.mockResolvedValue([
+      {beeminder_user: "a", beeminder_token: "t", plaintext: true},
+      {beeminder_user: "b", beeminder_token: "", unreadable: true},
+    ]);
+
+    await runCron();
+
+    expect(mockEncryptPlaintext).not.toHaveBeenCalled();
+    expect(mockCaptureMessage).toHaveBeenCalledTimes(1);
+    expect(mockGetGoals).toHaveBeenCalledWith("t");
+  });
+
+  it("logs per-run token counts", async () => {
+    mockGetUsers.mockResolvedValue([
+      {beeminder_user: "a", beeminder_token: "t", plaintext: true},
+      {beeminder_user: "b", beeminder_token: "u"},
+    ]);
+
+    await runCron();
+
+    expect(mockLog).toHaveBeenCalledWith(
+        {m: "cron users", total: 2, plaintext: 1, unreadable: 0},
+    );
+    expect(mockCaptureMessage).not.toHaveBeenCalled();
+  });
+
+  it("still dials when sealing a plaintext record fails", async () => {
+    mockGetUsers.mockResolvedValue([{
+      beeminder_user: "the_user",
+      beeminder_token: "the_token",
+      plaintext: true,
+    }]);
+    const error = new Error("kv down");
+    mockEncryptPlaintext.mockRejectedValue(error);
+
+    await runCron();
+
+    expect(mockCaptureException).toHaveBeenCalledWith(
+        error, {extra: {beeminder_user: "the_user"}},
+    );
+    expect(mockGetGoals).toHaveBeenCalledWith("the_token");
+  });
+});
