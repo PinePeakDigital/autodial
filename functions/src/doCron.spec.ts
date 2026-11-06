@@ -32,6 +32,7 @@ const mockDisableUser = disableUser as jest.Mock;
 const mockEncryptPlaintext = encryptPlaintext as jest.Mock;
 const mockLog = log as jest.Mock;
 const mockCaptureException = Sentry.captureException as jest.Mock;
+const mockCaptureMessage = Sentry.captureMessage as jest.Mock;
 
 function setGoal(g: Partial<Goal>) {
   mockGetGoal.mockResolvedValue(g as GoalVerbose);
@@ -440,6 +441,33 @@ describe("function", () => {
   it("leaves sealed records alone", async () => {
     await runCron();
     expect(mockEncryptPlaintext).not.toHaveBeenCalled();
+  });
+
+  it("does not seal plaintext when another record is unreadable", async () => {
+    mockGetUsers.mockResolvedValue([
+      {beeminder_user: "a", beeminder_token: "t", plaintext: true},
+      {beeminder_user: "b", beeminder_token: "", unreadable: true},
+    ]);
+
+    await runCron();
+
+    expect(mockEncryptPlaintext).not.toHaveBeenCalled();
+    expect(mockCaptureMessage).toHaveBeenCalledTimes(1);
+    expect(mockGetGoals).toHaveBeenCalledWith("t");
+  });
+
+  it("logs per-run token counts", async () => {
+    mockGetUsers.mockResolvedValue([
+      {beeminder_user: "a", beeminder_token: "t", plaintext: true},
+      {beeminder_user: "b", beeminder_token: "u"},
+    ]);
+
+    await runCron();
+
+    expect(mockLog).toHaveBeenCalledWith(
+        {m: "cron users", total: 2, plaintext: 1, unreadable: 0},
+    );
+    expect(mockCaptureMessage).not.toHaveBeenCalled();
   });
 
   it("still dials when sealing a plaintext record fails", async () => {

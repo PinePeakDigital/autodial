@@ -128,7 +128,7 @@ describe("database (KV)", () => {
       ]);
 
       await expect(getUsers(kv, key)).resolves.toEqual([
-        {beeminder_user: "alice", beeminder_token: ""},
+        {beeminder_user: "alice", beeminder_token: "", unreadable: true},
         {beeminder_user: "bob", beeminder_token: "b"},
       ]);
       expect(Sentry.captureException).toHaveBeenCalledWith(
@@ -181,6 +181,14 @@ describe("database (KV)", () => {
 
     it("skips a record already sealed by a re-authorization", async () => {
       const kv = makeKv([], await sealed("fresh"));
+      await expect(encryptPlaintext(kv, key, "alice", "tok")).resolves.toBe(
+          false,
+      );
+      expect(kv.put).not.toHaveBeenCalled();
+    });
+
+    it("skips a record whose plaintext token changed", async () => {
+      const kv = makeKv([], {token: "other"});
       await expect(encryptPlaintext(kv, key, "alice", "tok")).resolves.toBe(
           false,
       );

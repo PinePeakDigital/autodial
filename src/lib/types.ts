@@ -82,4 +82,7 @@ export type User = {
   // Set when the token was read from a pre-encryption plaintext record, so the
   // cron knows to re-store it sealed.
   plaintext?: boolean;
+  // Set when a sealed token failed to decrypt (corrupt record or wrong
+  // TOKEN_KEY).
+  unreadable?: boolean;
 };

@@ -23,6 +23,20 @@ const doCron = async (
 
   const users = await getUsers(kv, key);
 
+  // A sealed record that won't decrypt suggests TOKEN_KEY changed. Sealing the
+  // remaining plaintext under that key could lose those tokens once the right
+  // key is back, so leave them alone this run.
+  const unreadable = users.filter((u) => u.unreadable).length;
+  const plaintext = users.filter((u) => u.plaintext).length;
+  log({m: "cron users", total: users.length, plaintext, unreadable});
+  const sealPlaintext = unreadable === 0;
+  if (!sealPlaintext && plaintext) {
+    Sentry.captureMessage(
+        `${unreadable}/${users.length} tokens unreadable; ` +
+        "not sealing plaintext records this run",
+    );
+  }
+
   await Promise.all(users.map(async (
       {beeminder_user, beeminder_token, disabledAt, plaintext},
   ) => {
@@ -32,8 +46,9 @@ const doCron = async (
     }
 
     // Before the disabled check: a disabled record's token is still a secret
-    // sitting in KV.
-    if (plaintext) {
+    // sitting in KV. Runs in dry runs too: it rewrites the same token sealed,
+    // which changes nothing a user can see.
+    if (plaintext && sealPlaintext) {
       try {
         const sealed = await encryptPlaintext(
             kv, key, beeminder_user, beeminder_token,

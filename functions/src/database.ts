@@ -31,6 +31,7 @@ export async function getUsers(
     const res = await kv.list<TokenMeta>({cursor});
     for (const {name, metadata} of res.keys) {
       let token = "";
+      let unreadable = false;
       try {
         token = metadata ? await readToken(key, metadata) : "";
       } catch (e) {
@@ -38,6 +39,7 @@ export async function getUsers(
         // cron skips it as missing auth. Every record failing means TOKEN_KEY
         // is wrong.
         Sentry.captureException(e, {extra: {beeminder_user: name}});
+        unreadable = true;
       }
       users.push({
         beeminder_user: name,
@@ -45,6 +47,7 @@ export async function getUsers(
         disabledAt: metadata?.disabledAt,
         ...(metadata?.token !== undefined && !metadata.enc &&
           {plaintext: true}),
+        ...(unreadable && {unreadable: true}),
       });
     }
     cursor = res.list_complete ? undefined : res.cursor;
@@ -78,13 +81,13 @@ export async function encryptPlaintext(
     user: string,
     token: string,
 ): Promise<boolean> {
+  // Seal first so the re-read below sits right next to the write.
+  const enc = await seal(key, token);
   const {metadata} = await kv.getWithMetadata<TokenMeta>(user);
   if (!metadata || metadata.enc || metadata.token !== token) return false;
 
   const {disabledAt, disabledReason} = metadata;
-  await kv.put(user, "", {
-    metadata: {enc: await seal(key, token), disabledAt, disabledReason},
-  });
+  await kv.put(user, "", {metadata: {enc, disabledAt, disabledReason}});
   return true;
 }
 
