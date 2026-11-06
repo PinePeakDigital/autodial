@@ -6,9 +6,9 @@ const sum = (vals: number[]) => vals.reduce((a, b) => a + b, 0);
 type Reducer = (values: number[]) => number | undefined
 
 function aggregateByDate(data: Datapoint[], reduce: Reducer): Datapoint[] {
-  // A plain object, like lodash's groupBy: its integer-like daystamp keys
-  // iterate in ascending order.
-  const sets: Record<string, Datapoint[]> = {};
+  // Integer-like daystamp keys iterate in ascending order, as with lodash's
+  // groupBy. No prototype, so a key like "toString" can't break grouping.
+  const sets: Record<string, Datapoint[]> = Object.create(null);
   for (const d of data) (sets[d.daystamp] ??= []).push(d);
   return Object.entries(sets).map(([k, s]) =>
     ({

@@ -19,6 +19,12 @@ describe("aggregate", () => {
       ["20210203", 3],
     ]);
   });
+
+  it("groups a daystamp that matches an Object.prototype name", () => {
+    const data = [{daystamp: "toString", value: 1} as Datapoint];
+
+    expect(aggregate(data, "sum").map((d) => d.value)).toEqual([1]);
+  });
 });
 
 describe("daysnap", () => {
