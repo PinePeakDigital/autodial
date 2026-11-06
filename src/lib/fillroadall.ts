@@ -1,4 +1,3 @@
-import _ from "lodash";
 import {daysnap} from "./time";
 import {Fullroad, Roadall} from "./types";
 
@@ -56,7 +55,7 @@ const tvr = (
 export const fillroadall = (roadall: Roadall, siru: number): Fullroad => {
   if (!roadall.length) return [];
   // clone array to avoid modifying reference
-  const rd = _.cloneDeep(roadall);
+  const rd = roadall.map((row) => [...row]) as Roadall;
   const tini = rd[0][0];
   const vini = rd[0][1];
 

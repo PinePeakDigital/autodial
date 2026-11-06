@@ -1,7 +1,7 @@
 // Flat config (eslint 9+). Migrated from .eslintrc.js — every rule, plugin,
-// and override below is preserved from the legacy config; nothing was
-// dropped to make lint pass. See functions/eslint.config.js for the
-// sibling Worker config.
+// and override from the legacy config is preserved; nothing was dropped to
+// make lint pass. The src/lib import guard at the end was added later. See
+// functions/eslint.config.js for the sibling Worker config.
 const js = require("@eslint/js");
 const { FlatCompat } = require("@eslint/eslintrc");
 const tsPlugin = require("@typescript-eslint/eslint-plugin");
@@ -86,6 +86,24 @@ module.exports = [
     files: ["**/*.spec.+(ts|tsx)"],
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
+  {
+    // The Worker bundles these files and runs them with every user's
+    // token in reach, so they may import only relative paths. The hooks
+    // stay out of the Worker's import graph (src/lib/index.ts omits them),
+    // so never re-export them or import them from Worker-reachable files.
+    // ponytail: covers static imports in top-level src/lib/*.ts only, not
+    // import()/require() or subdirectories; widen if either appears.
+    files: ["src/lib/*.ts"],
+    ignores: ["src/lib/use*.ts", "src/lib/*.spec.ts"],
+    rules: {
+      "no-restricted-imports": ["error", {
+        patterns: [{
+          regex: "^[^.]",
+          message: "The Worker bundles src/lib: no package imports here.",
+        }],
+      }],
     },
   },
 ];
