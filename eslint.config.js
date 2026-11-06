@@ -88,4 +88,19 @@ module.exports = [
       "@typescript-eslint/no-explicit-any": "off",
     },
   },
+  {
+    // The Worker bundles these files and runs them with every user's
+    // token in reach, so they may import only relative paths. The hooks
+    // stay out of the Worker's import graph (src/lib/index.ts omits them).
+    files: ["src/lib/*.ts"],
+    ignores: ["src/lib/use*.ts", "src/lib/*.spec.ts"],
+    rules: {
+      "no-restricted-imports": ["error", {
+        patterns: [{
+          regex: "^[^.]",
+          message: "The Worker bundles src/lib: no package imports here.",
+        }],
+      }],
+    },
+  },
 ];
