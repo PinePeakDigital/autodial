@@ -6,7 +6,8 @@ import {
 
 describe("browser", () => {
   beforeEach(() => {
-    sessionStorage.clear();
+    clearCredentials();
+    vi.restoreAllMocks();
     window.history.replaceState(null, "", "/");
   });
 
@@ -20,6 +21,8 @@ describe("browser", () => {
 
       expect(window.location.search).toBe("");
       expect(getCredentials()).toEqual({user: "alice", token: "abc"});
+      expect(JSON.parse(sessionStorage.getItem("autodial_credentials") ?? ""))
+          .toEqual({user: "alice", token: "abc"});
     });
 
     it("leaves stored credentials alone when the URL has none", () => {
@@ -32,6 +35,31 @@ describe("browser", () => {
       takeCredentialsFromUrl();
 
       expect(window.location.search).toBe("?other=1");
+      expect(getCredentials()).toEqual({user: "alice", token: "abc"});
+    });
+
+    it("drops the token from an old disable link", () => {
+      window.history.replaceState(
+          null, "", "/?access_token=abc&username=alice&disable=true",
+      );
+
+      takeCredentialsFromUrl();
+
+      expect(window.location.search).toBe("");
+      expect(getCredentials()).toEqual({user: null, token: null});
+    });
+
+    it("still cleans the URL and signs in when storage is blocked", () => {
+      vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+        throw new Error("blocked");
+      });
+      window.history.replaceState(
+          null, "", "/?access_token=abc&username=alice",
+      );
+
+      takeCredentialsFromUrl();
+
+      expect(window.location.search).toBe("");
       expect(getCredentials()).toEqual({user: "alice", token: "abc"});
     });
   });

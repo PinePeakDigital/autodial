@@ -53,6 +53,8 @@ export default function StepOne(): JSX.Element {
         color="secondary"
         onClick={() => user && token && remove.mutate({user, token})}
         loading={remove.isPending}
+        // Wait for the on-load /update, so it can't land after /remove.
+        disabled={update.isPending}
       >Disable Autodialer</Button>
     </>}
   </>;

@@ -274,6 +274,30 @@ describe("Home page", () => {
     expect(getByText("Enable Autodialer")).toBeInTheDocument();
   });
 
+  it("stays signed in when disabling fails", async () => {
+    await withMutedReactQueryLogger(async () => {
+      mockRemove.mockRejectedValue({ message: "the_error" });
+
+      await r(<App />);
+      await disable();
+
+      await screen.findByText("the_error");
+      expect(screen.getByText("Disable Autodialer")).toBeInTheDocument();
+      expect(clearCredentials).not.toBeCalled();
+    });
+  });
+
+  it("blocks disabling until the on-load update finishes", async () => {
+    mockUpdate.mockReturnValue(new Promise(() => {}));
+
+    await r(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Disable Autodialer").closest("button"))
+        .toBeDisabled();
+    });
+  });
+
   it("deletes database user on disable", async () => {
     await r(<App />);
     await disable();
