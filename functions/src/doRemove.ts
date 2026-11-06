@@ -1,11 +1,10 @@
-import {getUser} from "../../src/lib";
+import {getMe} from "../../src/lib";
 import {removeUser} from "./database";
 
 export default async function doRemove(
     kv: KVNamespace,
-    user: string,
     token: string,
 ): Promise<void> {
-  await getUser(user, token);
+  const user = await getMe(token);
   await removeUser(kv, user);
 }

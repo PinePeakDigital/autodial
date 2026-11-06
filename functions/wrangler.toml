@@ -4,6 +4,11 @@ compatibility_date = "2026-07-19"
 # Required by @sentry/cloudflare (AsyncLocalStorage).
 compatibility_flags = ["nodejs_compat"]
 
+# Only the custom domain serves the app and API. Beeminder redirects OAuth there,
+# so nothing legitimate reaches workers.dev or preview URLs.
+workers_dev = false
+preview_urls = false
+
 # Serve the built SPA as static assets from this same Worker (no Cloudflare
 # Pages). Non-asset, non-GET requests (the /update, /remove POSTs) fall through
 # to the fetch handler; unmatched GETs serve index.html for client routing.

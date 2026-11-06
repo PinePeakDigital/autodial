@@ -78,9 +78,14 @@ export async function getGoal(
   return data;
 }
 
-export async function getUser(user: string, token: string): Promise<unknown> {
-  const url = `https://www.beeminder.com/api/v1/users/${user}.json`;
-  const response = await fetch(`${url}?access_token=${token}`);
+// The Worker identifies the caller by the access token alone: Beeminder says
+// whose token it is, so a client-supplied username is never trusted or
+// interpolated into a URL.
+export async function getMe(token: string): Promise<string> {
+  const url = "https://www.beeminder.com/api/v1/users/me.json";
+  const response = await fetch(
+      `${url}?access_token=${encodeURIComponent(token)}`,
+  );
 
   if (!response.ok) {
     const msg =
@@ -88,13 +93,17 @@ export async function getUser(user: string, token: string): Promise<unknown> {
     throw new Error(msg);
   }
 
-  const data = await response.json() as WithErrors;
+  const data = await response.json() as WithErrors & {username?: unknown};
 
   if (data?.errors) {
     throw new Error(data.errors.message);
   }
 
-  return data;
+  if (typeof data?.username !== "string" || !data.username) {
+    throw new Error("Beeminder returned no username for this access token");
+  }
+
+  return data.username;
 }
 
 export async function updateGoal(

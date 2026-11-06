@@ -1,5 +1,5 @@
 import type {Mock} from "vitest";
-import {getGoal, getGoals, getUser, updateGoal} from "./beeminder";
+import {getGoal, getGoals, getMe, updateGoal} from "./beeminder";
 import {BeeminderAuthError} from "./beeminderAuthError";
 
 function mockFetch(res: Record<string, unknown>) {
@@ -76,22 +76,37 @@ describe("beeminder client", () => {
     });
   });
 
-  // axios threw on non-2xx automatically; fetch does not, so getUser must
+  // axios threw on non-2xx automatically; fetch does not, so getMe must
   // check response.ok itself. These guard that behavior.
-  describe("getUser", () => {
+  describe("getMe", () => {
+    it("asks Beeminder whose token it is, not about a given user", async () => {
+      mockFetch({json: async () => ({username: "alice"})});
+      await getMe("t&x=1");
+      const url = ((global as unknown as { fetch: Mock }).fetch)
+          .mock.calls[0][0] as string;
+      expect(url).toBe(
+          "https://www.beeminder.com/api/v1/users/me.json?access_token=t%26x%3D1",
+      );
+    });
+
+    it("returns the username Beeminder reports", async () => {
+      mockFetch({json: async () => ({username: "alice"})});
+      await expect(getMe("t")).resolves.toBe("alice");
+    });
+
     it("throws on a non-2xx response", async () => {
       mockFetch({ok: false, status: 401, statusText: "Unauthorized"});
-      await expect(getUser("u", "t")).rejects.toThrow(/401/);
+      await expect(getMe("t")).rejects.toThrow(/401/);
     });
 
     it("throws when a 200 body carries errors", async () => {
       mockFetch({json: async () => ({errors: {message: "nope"}})});
-      await expect(getUser("u", "t")).rejects.toThrow("nope");
+      await expect(getMe("t")).rejects.toThrow("nope");
     });
 
-    it("resolves on success", async () => {
+    it("throws when the body has no username", async () => {
       mockFetch({json: async () => ({id: 1})});
-      await expect(getUser("u", "t")).resolves.toEqual({id: 1});
+      await expect(getMe("t")).rejects.toThrow(/no username/);
     });
   });
 
