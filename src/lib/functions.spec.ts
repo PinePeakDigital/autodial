@@ -43,8 +43,9 @@ describe("update", () => {
       text: () => rejectOnAbort(init),
     }));
 
-    fire();
     const result = update("alice", "abc");
+    await new Promise((r) => setTimeout(r)); // let text() start reading
+    fire();
 
     await expect(result).rejects.toThrow("didn't respond");
   });
