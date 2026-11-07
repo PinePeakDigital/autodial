@@ -8,7 +8,6 @@ import {
   Roadall,
   updateGoal,
   getGoal,
-  now,
   SID,
   SkipDialError,
   BeeminderAuthError,
@@ -160,8 +159,10 @@ describe("function", () => {
   });
 
   it("gets verbose goal with diffSince", async () => {
-    jest.spyOn(time, "now").mockReturnValue(noonUtc(2021, 2, 29));
-    const diffSince = now() - SID * 31;
+    const pinned = noonUtc(2021, 2, 29);
+    jest.spyOn(time, "now").mockReturnValue(pinned);
+    // A literal, not now(): proves doCron sees the pinned time.
+    const diffSince = pinned - SID * 31;
 
     const goal = makeGoal({
       fineprint: "#autodial",

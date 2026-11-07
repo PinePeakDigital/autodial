@@ -25,15 +25,7 @@
     "types": [
       "vite/client",
       "vitest/globals"
-    ],
-    "paths": {
-      // functions/src/test/helpers.ts (shared with the Worker's own jest
-      // suite, out of scope to edit here) imports from "@jest/globals";
-      // vite.config.ts aliases that to vitest at runtime, mirror it for tsc.
-      "@jest/globals": [
-        "./node_modules/vitest"
-      ]
-    }
+    ]
   },
   "include": [
     "src",

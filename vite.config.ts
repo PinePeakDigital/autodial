@@ -31,16 +31,5 @@ export default defineConfig({
     // any mocked implementation between tests so state doesn't leak across
     // specs in the same file.
     mockReset: true,
-    alias: {
-      // functions/src/test/helpers.ts (shared with the Worker's own jest
-      // suite, out of scope to edit here) imports `expect` from
-      // "@jest/globals" and registers the `toFuzzyEqual` matcher via
-      // expect.extend(). Redirect that import to vitest's own `expect` so
-      // the matcher lands on the same instance our specs use. Scoped to
-      // `test.alias` (not the top-level `resolve.alias`) since no
-      // production src/ file ever imports "@jest/globals" — this keeps
-      // the shim out of `vite build`'s module resolution entirely.
-      "@jest/globals": "vitest",
-    },
   },
 });

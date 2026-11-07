@@ -147,7 +147,7 @@ npx wrangler kv namespace create USERS
 
 - Separate Jest config in `functions/package.json`
 - `database` is mocked in the handler specs, so tests don't touch KV
-- Test helpers in `functions/src/test/helpers.ts`
+- Shared goal builders in `src/lib/test/fixtures.ts`
 
 ### Running Tests
 
