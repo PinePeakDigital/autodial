@@ -14,7 +14,7 @@ import {
   SID,
 } from "./lib";
 import { setNow, r, withMutedReactQueryLogger } from "./lib/test/helpers";
-import { GoalInput, makeGoal } from "../functions/src/test/helpers";
+import { GoalInput, makeGoal } from "./lib/test/fixtures";
 import { remove, update } from "./lib/functions";
 
 vi.mock("./lib/browser");

@@ -1,41 +1,18 @@
-import {expect} from "@jest/globals";
-import Matchers = jest.Matchers;
+// Plain goal builders shared by the frontend (vitest) and Worker (jest)
+// suites. No React and no test-runner globals: each suite does its own
+// spying and matcher registration.
 import {
   fillroadall,
   UNIT_SECONDS,
   parseDate,
-  fuzzyEquals,
   Datapoint,
   Goal,
   GoalVerbose, DenseSegment,
-} from "../../../src/lib";
+} from "../index";
 
-interface MyMatchers<R> extends Matchers<R> {
-  toFuzzyEqual(expected: number): R;
-}
-
-expect.extend({
-  toFuzzyEqual(received: number, expected: number) {
-    const pass = fuzzyEquals(expected, received);
-    if (pass) {
-      return {
-        message: () =>
-          `expected ${received} not to fuzzy equal ${expected}`,
-        pass: true,
-      };
-    } else {
-      return {
-        message: () =>
-          `expected ${received} to fuzzy equal ${expected}`,
-        pass: false,
-      };
-    }
-  },
-});
-
-// Also consumed by root's own vitest suite (dial.spec.ts): it imports this
-// module directly rather than duplicating the matcher.
-export const e = expect as never as <T>(actual: T) => MyMatchers<T>;
+// Noon UTC on the given date, in Unix seconds. Specs pin `now()` to it.
+export const noonUtc = (yyyy: number, m: number, d: number): number =>
+  Date.UTC(yyyy, m - 1, d, 12) / 1000;
 
 type DatapointInput = Omit<Datapoint, "timestamp"> & { timestamp?: number };
 export type GoalInput = Partial<Goal>
