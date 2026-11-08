@@ -127,9 +127,17 @@ describe("worker fetch", () => {
         const e = new BeeminderError("credential-rejected", 401, "Fetch error");
         ((path === "/update" ? doUpdate : doRemove) as jest.Mock)
             .mockRejectedValueOnce(e);
-        const res = await handlers.fetch(req("POST", path, {token: "t"}), env);
+        const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+        const res = await handlers.fetch(
+            req("POST", path, {token: "tok-secret"}), env,
+        );
         expect(res.status).toBe(401);
         expect(Sentry.captureException).not.toHaveBeenCalled();
+        expect(warn).toHaveBeenCalledWith(
+            {m: "credential rejected", path, status: 401},
+        );
+        expect(JSON.stringify(warn.mock.calls)).not.toContain("tok-secret");
+        warn.mockRestore();
       },
   );
 
