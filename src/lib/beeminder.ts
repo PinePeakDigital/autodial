@@ -1,9 +1,52 @@
 import {GoalVerbose, Goal, Roadall} from "./index";
-import {BeeminderAuthError} from "./beeminderAuthError";
+import {BeeminderError, BeeminderErrorKind} from "./beeminderError";
 
 // Beeminder returns either the resource or an { errors } object.
 // response.json() is unknown under workers-types, so cast at the boundary.
 type WithErrors = { errors?: { message: string } };
+
+const API = "https://www.beeminder.com/api/v1/users/me";
+
+type Scope = "account" | "goal";
+
+const kindOf = (status: number, scope: Scope): BeeminderErrorKind =>
+  status === 401 || (status === 404 && scope === "account") ?
+    "credential-rejected" :
+    status === 404 ? "not-found" : "other";
+
+// Every Beeminder call goes through here. Calls use `me`, so the access token
+// alone decides whose data is read or written; no stored username goes into
+// a Beeminder URL.
+async function request<T>(
+    token: string,
+    path: string,
+    scope: Scope,
+    init?: RequestInit,
+): Promise<T> {
+  // Keep the token out of `url` so it never lands in the thrown/logged message.
+  const url = `${API}${path}`;
+  const sep = url.includes("?") ? "&" : "?";
+  const response = await fetch(
+      `${url}${sep}access_token=${encodeURIComponent(token)}`,
+      init,
+  );
+
+  if (!response.ok) {
+    throw new BeeminderError(
+        kindOf(response.status, scope),
+        response.status,
+        `Fetch error: ${response.status} - ${response.statusText} - ${url}`,
+    );
+  }
+
+  const data = await response.json() as T & WithErrors;
+
+  if (data?.errors) {
+    throw new BeeminderError("other", response.status, data.errors.message);
+  }
+
+  return data;
+}
 
 export async function getGoalsVerbose(
     token: string,
@@ -23,113 +66,48 @@ export async function getGoalsVerbose(
   });
 }
 
-// Goal calls use `me`, so the access token alone decides whose goals are
-// read or written; no stored username goes into a Beeminder URL.
-export async function getGoals(token: string): Promise<Goal[]> {
-  // Keep the token out of `url` so it never lands in the thrown/logged message.
-  const url = "https://www.beeminder.com/api/v1/users/me/goals.json?filter=frontburner";
-  const response = await fetch(`${url}&access_token=${token}`);
+export const getGoals = (token: string): Promise<Goal[]> =>
+  request(token, "/goals.json?filter=frontburner", "account");
 
-  if (!response.ok) {
-    const msg =
-      `Fetch error: ${response.status} - ${response.statusText} - ${url}`;
-    if (response.status === 401 || response.status === 404) {
-      throw new BeeminderAuthError(response.status, msg);
-    }
-    throw new Error(msg);
-  }
-
-  const data = await response.json() as Goal[] & WithErrors;
-
-  if (data?.errors) {
-    throw new Error(data.errors.message);
-  }
-
-  return data;
-}
-
-export async function getGoal(
+export const getGoal = (
     token: string,
     slug: string,
     diffSince: number,
-): Promise<GoalVerbose> {
-  // Keep the token out of `url` so it never lands in the thrown/logged message.
-  const url = `https://www.beeminder.com/api/v1/users/me/goals/${slug}.json?diff_since=${diffSince}&datapoints=true`;
-  const response = await fetch(`${url}&access_token=${token}`);
-
-  if (!response.ok) {
-    const msg =
-      `Fetch error: ${response.status} - ${response.statusText} - ${url}`;
-    if (response.status === 401 || response.status === 404) {
-      throw new BeeminderAuthError(response.status, msg);
-    }
-    throw new Error(msg);
-  }
-
-  const data = await response.json() as GoalVerbose & WithErrors;
-
-  if (data?.errors) {
-    throw new Error(data.errors.message);
-  }
-
-  return data;
-}
+): Promise<GoalVerbose> => request(
+    token,
+    `/goals/${slug}.json?diff_since=${diffSince}&datapoints=true`,
+    "goal",
+);
 
 // The Worker identifies the caller by the access token alone: Beeminder says
 // whose token it is, so a client-supplied username is never trusted or
 // interpolated into a URL.
 export async function getMe(token: string): Promise<string> {
-  const url = "https://www.beeminder.com/api/v1/users/me.json";
-  const response = await fetch(
-      `${url}?access_token=${encodeURIComponent(token)}`,
-  );
-
-  if (!response.ok) {
-    const msg =
-      `Fetch error: ${response.status} - ${response.statusText} - ${url}`;
-    throw new Error(msg);
-  }
-
-  const data = await response.json() as WithErrors & {username?: unknown};
-
-  if (data?.errors) {
-    throw new Error(data.errors.message);
-  }
+  const data = await request<{username?: unknown}>(token, ".json", "account");
 
   if (typeof data?.username !== "string" || !data.username) {
-    throw new Error("Beeminder returned no username for this access token");
+    throw new BeeminderError(
+        "other", 200, "Beeminder returned no username for this access token",
+    );
   }
 
   return data.username;
 }
 
-export async function updateGoal(
+export const updateGoal = (
     token: string,
     slug: string,
     fields: {roadall: Roadall},
-): Promise<Omit<Goal, "datapoints">> {
-  const url = `https://www.beeminder.com/api/v1/users/me/goals/${slug}.json`;
-  const putData = {
-    ...fields,
-    roadall: JSON.stringify(fields.roadall),
-  };
-  const response = await fetch(`${url}?access_token=${token}`, {
-    method: "PUT",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify(putData),
-  });
-
-  if (!response.ok) {
-    const msg =
-      `Fetch error: ${response.status} - ${response.statusText} - ${url}`;
-    throw new Error(msg);
-  }
-
-  const data = await response.json() as Omit<Goal, "datapoints"> & WithErrors;
-
-  if (data?.errors) {
-    throw new Error(data.errors.message);
-  }
-
-  return data;
-}
+): Promise<Omit<Goal, "datapoints">> => request(
+    token,
+    `/goals/${slug}.json`,
+    "goal",
+    {
+      method: "PUT",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        ...fields,
+        roadall: JSON.stringify(fields.roadall),
+      }),
+    },
+);

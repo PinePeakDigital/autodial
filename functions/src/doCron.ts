@@ -9,7 +9,7 @@ import {
   Goal,
   getSettings, now, SID,
   SkipDialError,
-  BeeminderAuthError,
+  BeeminderError,
 } from "../../src/lib";
 
 /* eslint-disable camelcase */
@@ -101,10 +101,8 @@ const doCron = async (
             );
           }
         } catch (e) {
-          // Deliberately no BeeminderAuthError branch here: a per-goal 401/404
-          // usually means that goal was renamed or deleted, not that the
-          // credential is dead, so it stays a per-goal error. Only the
-          // account-level getGoals failure below disables a user.
+          // Per-goal failures never disable a user, even a rejected
+          // credential: a dead token fails getGoals on the next run anyway.
           if (e instanceof SkipDialError) {
             log(`skip dial goal ${beeminder_user}/${g.slug}: ${e.message}`);
           } else {
@@ -114,7 +112,7 @@ const doCron = async (
         }
       }));
     } catch (e) {
-      if (e instanceof BeeminderAuthError) {
+      if (e instanceof BeeminderError && e.kind === "credential-rejected") {
         // Report the auth failure BEFORE attempting the write, so it is
         // recorded no matter what the write does. A KV hiccup must also not
         // reject the surrounding Promise.all and take the whole run down --

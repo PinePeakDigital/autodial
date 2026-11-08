@@ -1,5 +1,5 @@
 export * from "./beeminder";
-export * from "./beeminderAuthError";
+export * from "./beeminderError";
 export * from "./dial";
 export * from "./skipDialError";
 export * from "./types";
