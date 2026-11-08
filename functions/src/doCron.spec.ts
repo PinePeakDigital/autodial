@@ -8,14 +8,13 @@ import {
   Roadall,
   updateGoal,
   getGoal,
-  now,
   SID,
   SkipDialError,
   BeeminderAuthError,
 } from "../../src/lib";
-import {setNow} from "../../src/lib/test/helpers";
 import {getUsers, disableUser, encryptPlaintext} from "./database";
-import {makeGoal} from "./test/helpers";
+import {makeGoal, noonUtc} from "../../src/lib/test/fixtures";
+import * as time from "../../src/lib/time";
 import log from "../../src/lib/log";
 
 jest.mock("@sentry/cloudflare");
@@ -160,8 +159,10 @@ describe("function", () => {
   });
 
   it("gets verbose goal with diffSince", async () => {
-    setNow(2021, 2, 29);
-    const diffSince = now() - SID * 31;
+    const pinned = noonUtc(2021, 2, 29);
+    jest.spyOn(time, "now").mockReturnValue(pinned);
+    // A literal, not now(): proves doCron sees the pinned time.
+    const diffSince = pinned - SID * 31;
 
     const goal = makeGoal({
       fineprint: "#autodial",

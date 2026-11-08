@@ -1,5 +1,5 @@
 import { getSettings } from "./getSettings";
-import { makeGoal } from "../../functions/src/test/helpers";
+import { makeGoal } from "./test/fixtures";
 
 describe("getSettings", () => {
   it("parses `from` option", () => {

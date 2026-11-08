@@ -1,5 +1,6 @@
 import { dial } from "./dial";
-import { e, makeGoal } from "../../functions/src/test/helpers";
+import { fuzzyEquals } from "./fuzzyEquals";
+import { makeGoal } from "./test/fixtures";
 import { parseDate } from "./time";
 import { setNow } from "./test/helpers";
 import { Roadall } from "./types";
@@ -16,7 +17,7 @@ function getRoadEnd(roadall: Roadall | false) {
 const expectEndRate = (roadall: Roadall | false, expected: number) => {
   const end = getRoadEnd(roadall);
 
-  e(end[2]).toEqual(expected);
+  expect(end[2]).toEqual(expected);
 };
 
 const expectFuzzyEndRate = (roadall: Roadall | false, expected: number) => {
@@ -26,7 +27,7 @@ const expectFuzzyEndRate = (roadall: Roadall | false, expected: number) => {
 
   const end = roadall[roadall.length - 1];
 
-  e(end[2]).toFuzzyEqual(expected);
+  expect(fuzzyEquals(end[2] ?? NaN, expected)).toBe(true);
 };
 
 describe("dial function", () => {
@@ -523,7 +524,7 @@ describe("dial function", () => {
       })
     );
 
-    e(r && r[1]).toEqual([parseDate("20210309"), null, 1]);
+    expect(r && r[1]).toEqual([parseDate("20210309"), null, 1]);
   });
 
   it("does not add row if last segment starts after horizon", async () => {
@@ -543,7 +544,7 @@ describe("dial function", () => {
       })
     );
 
-    e(r && r.length).toEqual(3);
+    expect(r && r.length).toEqual(3);
   });
 
   it("uses fullroad to decide if akrasia boundary needed", async () => {
@@ -563,7 +564,7 @@ describe("dial function", () => {
       })
     );
 
-    e(r && r.length).toEqual(3);
+    expect(r && r.length).toEqual(3);
   });
 
   it("does not dial goal if new rate ~= old rate", async () => {
