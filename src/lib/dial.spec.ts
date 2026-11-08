@@ -1,4 +1,5 @@
 import { dial } from "./dial";
+import { fuzzyEquals } from "./fuzzyEquals";
 import { makeGoal } from "./test/fixtures";
 import { parseDate } from "./time";
 import { setNow } from "./test/helpers";
@@ -26,7 +27,7 @@ const expectFuzzyEndRate = (roadall: Roadall | false, expected: number) => {
 
   const end = roadall[roadall.length - 1];
 
-  expect(end[2]).toBeCloseTo(expected, 12);
+  expect(fuzzyEquals(end[2] ?? NaN, expected)).toBe(true);
 };
 
 describe("dial function", () => {
