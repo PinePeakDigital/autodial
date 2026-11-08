@@ -113,7 +113,11 @@ describe("beeminder client", () => {
       const fetchMock = (global as unknown as { fetch: Mock }).fetch;
       expect(fetchMock).toHaveBeenCalledWith(
           expect.stringContaining("/goals/g.json?access_token=t"),
-          expect.objectContaining({method: "PUT"})
+          expect.objectContaining({
+            method: "PUT",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({roadall: JSON.stringify([])}),
+          })
       );
     });
   });

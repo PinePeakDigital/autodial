@@ -376,8 +376,12 @@ describe("function", () => {
     );
   });
 
-  it("does not disable the user on a non-auth error (e.g. 500)", async () => {
-    const error = new Error("Fetch error: 500 - ...");
+  it.each([
+    ["a plain Error", new Error("Fetch error: 500 - ...")],
+    ["a BeeminderError of kind other", new BeeminderError(
+        "other", 500, "Fetch error: 500 - ...",
+    )],
+  ])("does not disable the user on %s", async (_name, error) => {
     mockGetGoals.mockRejectedValue(error);
 
     await runCron();

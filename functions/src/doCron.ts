@@ -101,6 +101,8 @@ const doCron = async (
             );
           }
         } catch (e) {
+          // Per-goal failures never disable a user, even a rejected
+          // credential: a dead token fails getGoals on the next run anyway.
           if (e instanceof SkipDialError) {
             log(`skip dial goal ${beeminder_user}/${g.slug}: ${e.message}`);
           } else {

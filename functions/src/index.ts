@@ -56,6 +56,9 @@ export const handlers = {
     } catch (e) {
       // A rejected access token is the caller's problem, not a Worker fault.
       if (e instanceof BeeminderError && e.kind === "credential-rejected") {
+        console.warn({
+          m: "credential rejected", path: pathname, status: e.status,
+        });
         return new Response("Unauthorized", {status: 401});
       }
       Sentry.captureException(e);
