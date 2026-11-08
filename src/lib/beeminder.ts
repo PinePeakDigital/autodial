@@ -86,7 +86,9 @@ export async function getMe(token: string): Promise<string> {
   const data = await request<{username?: unknown}>(token, ".json", "account");
 
   if (typeof data?.username !== "string" || !data.username) {
-    throw new Error("Beeminder returned no username for this access token");
+    throw new BeeminderError(
+        "other", 200, "Beeminder returned no username for this access token",
+    );
   }
 
   return data.username;

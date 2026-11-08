@@ -101,7 +101,9 @@ describe("beeminder client", () => {
         "throws when the body has no usable username: %j",
         async (body) => {
           mockFetch({json: async () => body});
-          await expect(getMe("t")).rejects.toThrow(/no username/);
+          await expect(getMe("t")).rejects.toMatchObject({
+            kind: "other", message: expect.stringMatching(/no username/),
+          });
         });
   });
 
