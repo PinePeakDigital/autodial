@@ -3,6 +3,7 @@ import {handlers, Env} from "./index";
 import doUpdate from "./doUpdate";
 import doRemove from "./doRemove";
 import doCron from "./doCron";
+import {BeeminderError} from "../../src/lib/beeminderError";
 
 jest.mock("@sentry/cloudflare");
 jest.mock("./doUpdate");
@@ -117,6 +118,29 @@ describe("worker fetch", () => {
         env,
     );
     expect(res.status).toBe(500);
+  });
+
+  it.each(["/update", "/remove"])(
+      "401s %s on a rejected credential, without Sentry",
+      async (path) => {
+        (Sentry.captureException as jest.Mock).mockClear();
+        const e = new BeeminderError("credential-rejected", 401, "Fetch error");
+        ((path === "/update" ? doUpdate : doRemove) as jest.Mock)
+            .mockRejectedValueOnce(e);
+        const res = await handlers.fetch(req("POST", path, {token: "t"}), env);
+        expect(res.status).toBe(401);
+        expect(Sentry.captureException).not.toHaveBeenCalled();
+      },
+  );
+
+  it("500s and reports a Beeminder error that is not a rejection", async () => {
+    (Sentry.captureException as jest.Mock).mockClear();
+    (doUpdate as jest.Mock).mockRejectedValueOnce(
+        new BeeminderError("other", 500, "Fetch error"),
+    );
+    const res = await handlers.fetch(req("POST", "/update", {token: "t"}), env);
+    expect(res.status).toBe(500);
+    expect(Sentry.captureException).toHaveBeenCalled();
   });
 
   // The route check now runs before the body is parsed, but a known route

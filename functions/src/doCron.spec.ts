@@ -10,7 +10,7 @@ import {
   getGoal,
   SID,
   SkipDialError,
-  BeeminderAuthError,
+  BeeminderError,
 } from "../../src/lib";
 import {getUsers, disableUser, encryptPlaintext} from "./database";
 import {makeGoal, noonUtc} from "../../src/lib/test/fixtures";
@@ -39,6 +39,10 @@ function setGoal(g: Partial<Goal>) {
 }
 
 const key = {} as CryptoKey;
+
+const rejected = (status: number) => new BeeminderError(
+    "credential-rejected", status, `Fetch error: ${status} - ...`,
+);
 
 async function runCron() {
   const kv = {} as KVNamespace;
@@ -290,7 +294,7 @@ describe("function", () => {
   });
 
   it("disables the user on a 401 from getGoals", async () => {
-    const error = new BeeminderAuthError(401, "Fetch error: 401 - ...");
+    const error = rejected(401);
     mockGetGoals.mockRejectedValue(error);
 
     const kv = await runCron();
@@ -305,7 +309,7 @@ describe("function", () => {
   });
 
   it("disables the user on a 404 from getGoals", async () => {
-    const error = new BeeminderAuthError(404, "Fetch error: 404 - ...");
+    const error = rejected(404);
     mockGetGoals.mockRejectedValue(error);
 
     const kv = await runCron();
@@ -320,7 +324,7 @@ describe("function", () => {
   });
 
   it("reports a disabled user to Sentry once, with the status", async () => {
-    const error = new BeeminderAuthError(401, "Fetch error: 401 - ...");
+    const error = rejected(401);
     mockGetGoals.mockRejectedValue(error);
     mockDisableUser.mockResolvedValue(true);
 
@@ -336,7 +340,7 @@ describe("function", () => {
   });
 
   it("reports the auth error even when the write is skipped", async () => {
-    const error = new BeeminderAuthError(401, "Fetch error: 401 - ...");
+    const error = rejected(401);
     mockGetGoals.mockRejectedValue(error);
     mockDisableUser.mockResolvedValue(false);
 
@@ -351,7 +355,7 @@ describe("function", () => {
   });
 
   it("survives a KV failure while disabling", async () => {
-    const error = new BeeminderAuthError(401, "Fetch error: 401 - ...");
+    const error = rejected(401);
     const writeError = new Error("KV unavailable");
     mockGetGoals.mockRejectedValue(error);
     mockDisableUser.mockRejectedValue(writeError);
@@ -390,17 +394,16 @@ describe("function", () => {
     const g = makeGoal({fineprint: "#autodial"});
     mockGetGoals.mockResolvedValue([g]);
     mockGetGoal.mockRejectedValue(
-        new BeeminderAuthError(401, "Fetch error: 401 - ..."),
+        rejected(401),
     );
 
     await runCron();
 
-    // Deliberate asymmetry: a per-goal 401/404 usually means the goal was
-    // renamed or deleted, not that the credential died. Pinned so a future
-    // refactor cannot quietly unify the two catch blocks in either direction.
+    // Only the goals-list call disables a user; per-goal failures stay
+    // per-goal errors (a dead credential fails the next run's goals list).
     expect(mockDisableUser).not.toHaveBeenCalled();
     expect(mockCaptureException).toHaveBeenCalledWith(
-        expect.any(BeeminderAuthError),
+        expect.any(BeeminderError),
         expect.objectContaining({
           extra: expect.objectContaining({slug: g.slug}),
         }),

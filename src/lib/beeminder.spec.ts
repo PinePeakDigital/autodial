@@ -1,6 +1,6 @@
 import type {Mock} from "vitest";
 import {getGoal, getGoals, getMe, updateGoal} from "./beeminder";
-import {BeeminderAuthError} from "./beeminderAuthError";
+import {BeeminderError} from "./beeminderError";
 
 function mockFetch(res: Record<string, unknown>) {
   (global as unknown as { fetch: Mock }).fetch = vi
@@ -29,69 +29,58 @@ describe("beeminder client", () => {
     ]);
   });
 
-  describe("getGoals", () => {
-    it("returns parsed data on success", async () => {
-      mockFetch({json: async () => [{slug: "g"}]});
-      await expect(getGoals("t")).resolves.toEqual([{slug: "g"}]);
+  // Every call shares one request path, so one table covers all four.
+  const calls = {
+    getMe: {scope: "account", run: () => getMe("t")},
+    getGoals: {scope: "account", run: () => getGoals("t")},
+    getGoal: {scope: "goal", run: () => getGoal("t", "g", 0)},
+    updateGoal: {scope: "goal", run: () => updateGoal("t", "g", {roadall: []})},
+  };
+
+  describe.each(Object.entries(calls))("%s", (_name, {scope, run}) => {
+    it.each([
+      [401, "credential-rejected"],
+      [404, scope === "account" ? "credential-rejected" : "not-found"],
+      [403, "other"],
+      [500, "other"],
+    ])("classifies a %i as %s", async (status, kind) => {
+      mockFetch({ok: false, status, statusText: "x"});
+      const err = await run().catch((e) => e);
+      expect(err).toBeInstanceOf(BeeminderError);
+      expect(err).toMatchObject({kind, status});
+      expect(err.message).toMatch(String(status));
     });
 
-    it("throws when the body carries errors", async () => {
+    it("classifies a 200 whose body carries errors as other", async () => {
       mockFetch({json: async () => ({errors: {message: "bad"}})});
-      await expect(getGoals("t")).rejects.toThrow("bad");
+      const err = await run().catch((e) => e);
+      expect(err).toMatchObject({kind: "other", message: "bad"});
     });
 
-    it("throws on a non-2xx response (before parsing)", async () => {
-      mockFetch({ok: false, status: 500, statusText: "Server Error"});
-      await expect(getGoals("t")).rejects.toThrow(/500/);
-    });
-
-    it("throws a generic Error (not BeeminderAuthError) on 500", async () => {
-      mockFetch({ok: false, status: 500, statusText: "Server Error"});
-      await expect(getGoals("t")).rejects.not.toBeInstanceOf(
-          BeeminderAuthError
-      );
-    });
-
-    it("throws BeeminderAuthError on 401", async () => {
-      mockFetch({ok: false, status: 401, statusText: "Unauthorized"});
-      const err = await getGoals("t").catch((e) => e);
-      expect(err).toBeInstanceOf(BeeminderAuthError);
-      expect(err.status).toBe(401);
-    });
-
-    it("throws BeeminderAuthError on 404", async () => {
-      mockFetch({ok: false, status: 404, statusText: "Not Found"});
-      const err = await getGoals("t").catch((e) => e);
-      expect(err).toBeInstanceOf(BeeminderAuthError);
-      expect(err.status).toBe(404);
+    it("encodes the token and keeps it out of the error", async () => {
+      mockFetch({ok: false, status: 500, statusText: "x"});
+      const err = await run().catch((e) => e);
+      const url = ((global as unknown as { fetch: Mock }).fetch)
+          .mock.calls[0][0] as string;
+      expect(url).toMatch(/[?&]access_token=t$/);
+      expect(err.message).not.toMatch("access_token");
     });
   });
 
-  describe("getGoal", () => {
-    it("throws BeeminderAuthError on 401", async () => {
-      mockFetch({ok: false, status: 401, statusText: "Unauthorized"});
-      const err = await getGoal("t", "g", 0).catch((e) => e);
-      expect(err).toBeInstanceOf(BeeminderAuthError);
-      expect(err.status).toBe(401);
-    });
-
-    it("throws BeeminderAuthError on 404", async () => {
-      mockFetch({ok: false, status: 404, statusText: "Not Found"});
-      const err = await getGoal("t", "g", 0).catch((e) => e);
-      expect(err).toBeInstanceOf(BeeminderAuthError);
-      expect(err.status).toBe(404);
-    });
-
-    it("throws a generic Error (not BeeminderAuthError) on 500", async () => {
-      mockFetch({ok: false, status: 500, statusText: "Server Error"});
-      const err = await getGoal("t", "g", 0).catch((e) => e);
-      expect(err).not.toBeInstanceOf(BeeminderAuthError);
-      expect(err).toBeInstanceOf(Error);
-    });
+  it("encodes a token with URL metacharacters", async () => {
+    mockFetch({json: async () => []});
+    await getGoals("t&x=1");
+    const url = ((global as unknown as { fetch: Mock }).fetch)
+        .mock.calls[0][0] as string;
+    expect(new URL(url).searchParams.get("access_token")).toBe("t&x=1");
+    expect(new URL(url).searchParams.get("filter")).toBe("frontburner");
   });
 
-  // axios threw on non-2xx automatically; fetch does not, so getMe must
-  // check response.ok itself. These guard that behavior.
+  it("returns parsed data on success", async () => {
+    mockFetch({json: async () => [{slug: "g"}]});
+    await expect(getGoals("t")).resolves.toEqual([{slug: "g"}]);
+  });
+
   describe("getMe", () => {
     it("asks Beeminder whose token it is, not about a given user", async () => {
       mockFetch({json: async () => ({username: "alice"})});
@@ -108,16 +97,6 @@ describe("beeminder client", () => {
       await expect(getMe("t")).resolves.toBe("alice");
     });
 
-    it("throws on a non-2xx response", async () => {
-      mockFetch({ok: false, status: 401, statusText: "Unauthorized"});
-      await expect(getMe("t")).rejects.toThrow(/401/);
-    });
-
-    it("throws when a 200 body carries errors", async () => {
-      mockFetch({json: async () => ({errors: {message: "nope"}})});
-      await expect(getMe("t")).rejects.toThrow("nope");
-    });
-
     it.each([[{id: 1}], [{username: ""}], [{username: 42}], [null]])(
         "throws when the body has no usable username: %j",
         async (body) => {
@@ -127,11 +106,9 @@ describe("beeminder client", () => {
   });
 
   describe("updateGoal", () => {
-    it("PUTs and throws on a non-2xx response", async () => {
-      mockFetch({ok: false, status: 500, statusText: "Server Error"});
-      await expect(
-          updateGoal("t", "g", {roadall: []})
-      ).rejects.toThrow(/500/);
+    it("PUTs the goal", async () => {
+      mockFetch({json: async () => ({})});
+      await updateGoal("t", "g", {roadall: []});
 
       const fetchMock = (global as unknown as { fetch: Mock }).fetch;
       expect(fetchMock).toHaveBeenCalledWith(

@@ -4,6 +4,7 @@ import doUpdate from "./doUpdate";
 import doRemove from "./doRemove";
 import {redactToken} from "../../src/lib/redactToken";
 import {importTokenKey} from "./tokenCrypto";
+import {BeeminderError} from "../../src/lib/beeminderError";
 
 export interface Env {
   USERS: KVNamespace;
@@ -53,6 +54,10 @@ export const handlers = {
 
       return new Response("Success", {status: 200});
     } catch (e) {
+      // A rejected access token is the caller's problem, not a Worker fault.
+      if (e instanceof BeeminderError && e.kind === "credential-rejected") {
+        return new Response("Unauthorized", {status: 401});
+      }
       Sentry.captureException(e);
       console.error(e);
       return new Response("Error", {status: 500});
