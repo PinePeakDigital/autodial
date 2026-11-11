@@ -8,7 +8,7 @@
     "@mui/icons-material": "^9.5.0",
     "@mui/material": "^9.5.0",
     "@sentry/react": "^10.0.0",
-    "@tanstack/react-query": "^5.0.0",
+    "@tanstack/react-query": "^5.105.3",
     "moment": "^2.31.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
@@ -45,10 +45,10 @@
     "@types/node": "^20.19.43",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@typescript-eslint/eslint-plugin": "^8.71.1",
+    "@typescript-eslint/eslint-plugin": "^8.72.1",
     "@typescript-eslint/parser": "^8.70.1",
-    "@vitejs/plugin-react": "^6.1.2",
-    "eslint": "^10.12.0",
+    "@vitejs/plugin-react": "^6.2.1",
+    "eslint": "^10.14.0",
     "eslint-config-google": "^0.14.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-import-resolver-typescript": "^4.4.5",
@@ -57,7 +57,7 @@
     "jsdom": "^30.1.3",
     "prettier": "3.9.10",
     "typescript": "^5.9.3",
-    "vite": "^8.3.3",
+    "vite": "^8.3.5",
     "vitest": "^4.1.12"
   }
 }
