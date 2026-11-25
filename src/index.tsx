@@ -15,7 +15,9 @@ if (import.meta.env.VITE_SENTRY_DSN) {
   Sentry.init({
     dsn: import.meta.env.VITE_SENTRY_DSN,
     tracesSampleRate: 0,
-    sendDefaultPii: false,
+    // Sentry 11 replaced sendDefaultPii with dataCollection, whose unset
+    // defaults collect more. These keep the v10 sendDefaultPii:false behavior.
+    dataCollection: {userInfo: false, cookies: false, httpBodies: []},
     // After the Beeminder OAuth redirect the token sits in the URL bar, which
     // Sentry copies onto every event; scrub it before anything is sent.
     beforeSend(event) {
