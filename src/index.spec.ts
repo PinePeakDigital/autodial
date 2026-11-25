@@ -9,4 +9,16 @@ describe("index", () => {
     expect(take).toBeGreaterThan(-1);
     expect(take).toBeLessThan(src.indexOf("Sentry.init("));
   });
+
+  // Sentry 11 collects user info and cookies unless dataCollection says not to.
+  it("keeps Sentry's personal-data collection switched off", () => {
+    const src = readFileSync("src/index.tsx", "utf8");
+    const flags = [
+      "userInfo:\\s*false",
+      "cookies:\\s*false",
+      "httpBodies:\\s*\\[\\]",
+    ];
+    const pattern = new RegExp(`dataCollection:\\s*\\{${flags.join("[^}]*")}`);
+    expect(src).toMatch(pattern);
+  });
 });
